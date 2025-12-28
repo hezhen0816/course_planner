@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Settings, Upload, LogOut } from 'lucide-react';
+import { GraduationCap, Settings, Upload, LogOut, CircleHelp } from 'lucide-react';
 import { supabase } from '../supabase';
 
 interface NavbarProps {
@@ -51,16 +51,25 @@ export const Navbar: React.FC<NavbarProps> = ({ userEmail, syncStatus, onOpenSet
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">設定門檻</span>
             </button>
-            <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer">
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">匯入成績</span>
-              <input
-                type="file"
-                accept=".html"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
+            <div className="flex items-center gap-1">
+              <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">匯入成績</span>
+                <input
+                  type="file"
+                  accept=".html"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={() => alert('匯入說明：\n1. 前往臺科大成績查詢系統 (https://stuinfosys.ntust.edu.tw/StuScoreQueryServ/StuScoreQuery)\n2. 在頁面上點擊右鍵，選擇「另存新檔」或「網頁儲存為...」\n3. 下載 .html 檔案\n4. 點擊「匯入成績」按鈕並選擇該檔案即可匯入課程資料')}
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="匯入說明"
+              >
+                <CircleHelp className="w-5 h-5" />
+              </button>
+            </div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
