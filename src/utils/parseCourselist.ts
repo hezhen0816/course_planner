@@ -79,6 +79,7 @@ export function parseCourselistHTML(html: string): ParsedCourseWithSemester[] {
       name: courseName,
       credits: credits,
       category: category,
+      program: 'home',
       dimension: 'None',
       details: professor
         ? {
@@ -108,25 +109,34 @@ export function parseCourselistHTML(html: string): ParsedCourseWithSemester[] {
 function parseSemesterFromHTML(doc: Document): string {
   // 嘗試從頁面中尋找學期資訊 (例如: "選課清單(1142)" 或 "1142")
   const bodyText = doc.body.textContent || '';
-  
+
   // 匹配學期格式: 1141, 1142, 1131, 1132 等
-  const semesterMatch = bodyText.match(/\((\d{3})(\d)\)/);
-  
+  const semesterMatch = bodyText.match(/\((\d{3})([12])\)/) || bodyText.match(/\b(\d{3})([12])\b/);
+
   if (semesterMatch) {
-    const semester = parseInt(semesterMatch[2]); // 1 或 2
-    
-    // 假設使用者是從入學年開始計算
-    // 這裡我們需要知道入學年份來計算年級
-    // 暫時假設當前學期就是大一的學期
-    // 如果是第1學期就是上學期，第2學期就是下學期
-    const semesterSuffix = semester === 1 ? '1' : '2';
-    
-    // 預設為大一，使用者可以之後手動調整
-    return `1-${semesterSuffix}`;
+    const academicYear = parseInt(semesterMatch[1], 10);
+    const semester = parseInt(semesterMatch[2], 10);
+    return convertToSemesterId(academicYear, semester);
   }
-  
+
   // 如果找不到學期資訊，預設為大一上
   return '1-1';
+}
+
+function convertToSemesterId(academicYear: number, semester: number): string {
+  const currentAcademicYear = getCurrentAcademicYear();
+  // 以目前學年度為大一，往前推估年級；避免超出既有 1-4 年級欄位
+  const estimatedGrade = currentAcademicYear - academicYear + 1;
+  const gradeLevel = Math.max(1, Math.min(4, estimatedGrade));
+  const semesterSuffix = semester === 2 ? '2' : '1';
+  return `${gradeLevel}-${semesterSuffix}`;
+}
+
+function getCurrentAcademicYear(): number {
+  const now = new Date();
+  const rocYear = now.getFullYear() - 1911;
+  // 台灣學年度通常從 8 月開始
+  return now.getMonth() >= 7 ? rocYear : rocYear - 1;
 }
 
 /**

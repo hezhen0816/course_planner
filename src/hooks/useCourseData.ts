@@ -1,19 +1,33 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import type { AppData } from '../types';
-import { INITIAL_SEMESTERS } from '../constants';
+import type { AppData, Course } from '../types';
+import { INITIAL_SEMESTERS, DEFAULT_TARGETS } from '../constants';
+
+function normalizeCourse(course: Course): Course {
+  return {
+    ...course,
+    program: course.program ?? 'home',
+  };
+}
+
+function normalizeAppData(rawData: AppData): AppData {
+  return {
+    ...rawData,
+    semesters: (rawData.semesters || INITIAL_SEMESTERS).map((semester) => ({
+      ...semester,
+      courses: (semester.courses || []).map(normalizeCourse),
+    })),
+    targets: {
+      ...DEFAULT_TARGETS,
+      ...(rawData.targets || {}),
+    },
+  };
+}
 
 export function useCourseData(session: any) {
   const [data, setData] = useState<AppData>({
     semesters: INITIAL_SEMESTERS,
-    targets: {
-      total: 133,
-      chinese: 6,
-      english: 12,
-      gen_ed: 15,
-      pe_semesters: 6,
-      social: 1,
-    }
+    targets: { ...DEFAULT_TARGETS }
   });
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +53,7 @@ export function useCourseData(session: any) {
       }
 
       if (userData && userData.content) {
-        setData(userData.content);
+        setData(normalizeAppData(userData.content));
       }
       setSyncStatus('idle');
       setIsLoading(false);
@@ -52,6 +66,7 @@ export function useCourseData(session: any) {
   const saveUserData = async (newData: AppData) => {
     if (!session || !supabase) return;
     setSyncStatus('saving');
+    const normalizedData = normalizeAppData(newData);
     
     // Check existing
     const { data: existingData } = await supabase
@@ -64,13 +79,13 @@ export function useCourseData(session: any) {
     if (existingData) {
       const { error: updateError } = await supabase
         .from('user_data')
-        .update({ content: newData, updated_at: new Date() })
+        .update({ content: normalizedData, updated_at: new Date() })
         .eq('user_id', session.user.id);
       error = updateError;
     } else {
       const { error: insertError } = await supabase
         .from('user_data')
-        .insert([{ user_id: session.user.id, content: newData }]);
+        .insert([{ user_id: session.user.id, content: normalizedData }]);
       error = insertError;
     }
 

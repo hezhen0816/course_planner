@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
-import type { Course, CourseCategory, GenEdDimension } from '../types';
-import { CATEGORY_LABELS, GEN_ED_LABELS } from '../constants';
+import type { Course, CourseCategory, GenEdDimension, CourseProgram } from '../types';
+import { CATEGORY_LABELS, GEN_ED_LABELS, PROGRAM_LABELS } from '../constants';
 
 interface CourseModalProps {
   isOpen: boolean;
@@ -14,18 +14,24 @@ export const CourseModal: React.FC<CourseModalProps> = ({ isOpen, onClose, onSav
   const [formName, setFormName] = useState('');
   const [formCredits, setFormCredits] = useState(3);
   const [formCategory, setFormCategory] = useState<CourseCategory>('compulsory');
+  const [formProgram, setFormProgram] = useState<CourseProgram>('home');
   const [formDimension, setFormDimension] = useState<GenEdDimension>('None');
+
+  const supportsProgram = (category: CourseCategory) =>
+    category === 'compulsory' || category === 'elective' || category === 'other' || category === 'unclassified';
 
   useEffect(() => {
     if (editingCourse) {
       setFormName(editingCourse.name);
       setFormCredits(editingCourse.credits);
       setFormCategory(editingCourse.category);
+      setFormProgram(editingCourse.program || 'home');
       setFormDimension(editingCourse.dimension || 'None');
     } else {
       setFormName('');
       setFormCredits(3);
       setFormCategory('compulsory');
+      setFormProgram('home');
       setFormDimension('None');
     }
   }, [editingCourse, isOpen]);
@@ -37,6 +43,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({ isOpen, onClose, onSav
       name: formName,
       credits: Number(formCredits),
       category: formCategory,
+      program: supportsProgram(formCategory) ? formProgram : 'home',
       dimension: formCategory === 'gen_ed' ? formDimension : undefined
     };
     onSave(newCourse);
@@ -90,8 +97,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({ isOpen, onClose, onSav
               <select 
                 value={formCategory}
                 onChange={(e) => {
-                  setFormCategory(e.target.value as CourseCategory);
-                  if (e.target.value === 'pe') setFormCredits(0);
+                  const nextCategory = e.target.value as CourseCategory;
+                  setFormCategory(nextCategory);
+                  if (nextCategory === 'pe') setFormCredits(0);
+                  if (!supportsProgram(nextCategory)) setFormProgram('home');
                 }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
               >
@@ -101,6 +110,24 @@ export const CourseModal: React.FC<CourseModalProps> = ({ isOpen, onClose, onSav
               </select>
             </div>
           </div>
+
+          {supportsProgram(formCategory) && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">課程歸屬</label>
+              <select
+                value={formProgram}
+                onChange={(e) => setFormProgram(e.target.value as CourseProgram)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+              >
+                {Object.entries(PROGRAM_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                用來區分本系、雙主修與輔修，不影響共同必修與通識統計。
+              </p>
+            </div>
+          )}
 
           {formCategory === 'gen_ed' && (
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">

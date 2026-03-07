@@ -10,6 +10,7 @@ export type CourseCategory =
   | 'unclassified'; // 未歸類
 
 export type GenEdDimension = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'None';
+export type CourseProgram = 'home' | 'double_major' | 'minor' | 'other';
 
 export interface GradingItem {
   id: string;
@@ -33,6 +34,7 @@ export interface Course {
   name: string;
   credits: number;
   category: CourseCategory;
+  program?: CourseProgram;
   dimension?: GenEdDimension; // For General Education
   grade?: string;
   details?: CourseDetails;
@@ -44,14 +46,20 @@ export interface Semester {
   courses: Course[];
 }
 
+export interface AppTargets {
+  total: number;
+  chinese: number;
+  english: number;
+  gen_ed: number;
+  pe_semesters: number;
+  social: number;
+  home_compulsory: number;
+  home_elective: number;
+  double_major: number;
+  minor: number;
+}
+
 export interface AppData {
   semesters: Semester[];
-  targets: {
-    total: number;
-    chinese: number;
-    english: number;
-    gen_ed: number;
-    pe_semesters: number;
-    social: number;
-  };
+  targets: AppTargets;
 }

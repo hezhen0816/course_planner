@@ -86,20 +86,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ data, stats }) => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <h2 className="text-lg font-bold text-slate-800 mb-2 flex items-center">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
           <BookOpen className="h-5 w-5 mr-2 text-red-500" />
           系所課程
         </h2>
-        <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">系必修學分</span>
-              <span className="font-bold">{stats.compulsory}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">選修學分</span>
-              <span className="font-bold">{stats.elective}</span>
-            </div>
-        </div>
+        <ProgressBar
+          label="本系必修"
+          current={stats.homeCompulsory}
+          target={data.targets.home_compulsory}
+          colorClass="bg-rose-500"
+        />
+        <ProgressBar
+          label="本系選修"
+          current={stats.homeElective}
+          target={data.targets.home_elective}
+          colorClass="bg-sky-500"
+        />
+
+        <div className="border-t border-slate-100 my-4"></div>
+
+        <ProgressBar
+          label="雙主修"
+          current={stats.doubleMajor}
+          target={data.targets.double_major}
+          colorClass="bg-emerald-500"
+        />
+        <ProgressBar
+          label="輔修"
+          current={stats.minor}
+          target={data.targets.minor}
+          colorClass="bg-amber-500"
+        />
       </div>
     </div>
   );

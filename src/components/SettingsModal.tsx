@@ -24,7 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
           <h3 className="text-lg font-bold text-slate-800">
             設定畢業門檻
@@ -103,6 +103,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                 onChange={(e) => setSettingsForm({...settingsForm, pe_semesters: Number(e.target.value)})}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h4 className="text-sm font-semibold text-slate-600 mb-3">系所課程門檻</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">本系必修</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={settingsForm.home_compulsory}
+                  onChange={(e) => setSettingsForm({...settingsForm, home_compulsory: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">本系選修</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={settingsForm.home_elective}
+                  onChange={(e) => setSettingsForm({...settingsForm, home_elective: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">雙主修</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={settingsForm.double_major}
+                  onChange={(e) => setSettingsForm({...settingsForm, double_major: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">輔修</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={settingsForm.minor}
+                  onChange={(e) => setSettingsForm({...settingsForm, minor: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
             </div>
           </div>
 

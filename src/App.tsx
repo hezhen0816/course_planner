@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Course, CourseCategory, GenEdDimension } from './types';
-import { INITIAL_SEMESTERS } from './constants';
+import { INITIAL_SEMESTERS, DEFAULT_TARGETS } from './constants';
 import { useAuth } from './hooks/useAuth';
 import { useCourseData } from './hooks/useCourseData';
 import { AuthPage } from './components/AuthPage';
@@ -15,9 +15,8 @@ import { parseCourselistHTML } from './utils/parseCourselist';
 
 export default function NTUSTCoursePlanner() {
   const { session, loading: authLoading } = useAuth();
-  const [isGuestMode, setIsGuestMode] = useState(false); // 新增訪客模式狀態
+  const [isDemoMode, setIsDemoMode] = useState(false);
   
-  // 傳入 session (如果是訪客模式則為 null，useCourseData 會自動處理)
   const { data, setData, syncStatus, isLoading: dataLoading } = useCourseData(session);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,16 +51,18 @@ export default function NTUSTCoursePlanner() {
       gen_ed: 0,
       pe_semesters: 0,
       social: 0,
-      compulsory: 0,
-      elective: 0,
+      homeCompulsory: 0,
+      homeElective: 0,
+      doubleMajor: 0,
+      minor: 0,
       genEdDimensions: new Set<string>(),
     };
 
     data.semesters.forEach(sem => {
       let hasPE = false;
       sem.courses.forEach(course => {
-        // 修正：確保 credits 是有效數字
         const credits = isNaN(course.credits) ? 0 : course.credits;
+        const program = course.program ?? 'home';
 
         if (course.category === 'pe') {
           hasPE = true;
@@ -83,8 +84,10 @@ export default function NTUSTCoursePlanner() {
                 current.genEdDimensions.add(course.dimension);
             }
         }
-        if (course.category === 'compulsory') current.compulsory += credits;
-        if (course.category === 'elective') current.elective += credits;
+        if (program === 'double_major') current.doubleMajor += credits;
+        if (program === 'minor') current.minor += credits;
+        if (program === 'home' && course.category === 'compulsory') current.homeCompulsory += credits;
+        if (program === 'home' && course.category === 'elective') current.homeElective += credits;
       });
       if (hasPE) current.pe_semesters += 1;
     });
@@ -118,6 +121,52 @@ export default function NTUSTCoursePlanner() {
       semesters: prev.semesters.map(s => {
         if (s.id !== semesterId) return s;
         return { ...s, courses: s.courses.filter(c => c.id !== courseId) };
+      })
+    }));
+  };
+
+  const handleMoveCourse = (semesterId: string, courseId: string, direction: 'up' | 'down') => {
+    setData(prev => ({
+      ...prev,
+      semesters: prev.semesters.map(s => {
+        if (s.id !== semesterId) return s;
+
+        const currentIndex = s.courses.findIndex(c => c.id === courseId);
+        if (currentIndex === -1) return s;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= s.courses.length) return s;
+
+        const nextCourses = [...s.courses];
+        [nextCourses[currentIndex], nextCourses[targetIndex]] = [nextCourses[targetIndex], nextCourses[currentIndex]];
+        return { ...s, courses: nextCourses };
+      })
+    }));
+  };
+
+  const handleSortCoursesByCategory = (semesterId: string) => {
+    const categoryOrder: Record<CourseCategory, number> = {
+      compulsory: 1,
+      elective: 2,
+      gen_ed: 3,
+      chinese: 4,
+      english: 5,
+      social: 6,
+      pe: 7,
+      other: 8,
+      unclassified: 9,
+    };
+
+    setData(prev => ({
+      ...prev,
+      semesters: prev.semesters.map(s => {
+        if (s.id !== semesterId) return s;
+        const nextCourses = [...s.courses].sort((a, b) => {
+          const categoryDiff = categoryOrder[a.category] - categoryOrder[b.category];
+          if (categoryDiff !== 0) return categoryDiff;
+          return a.name.localeCompare(b.name, 'zh-Hant');
+        });
+        return { ...s, courses: nextCourses };
       })
     }));
   };
@@ -164,7 +213,7 @@ export default function NTUSTCoursePlanner() {
     setIsDetailOpen(false);
   };
 
-  const handleSaveSettings = (newTargets: any) => {
+  const handleSaveSettings = (newTargets: typeof data.targets) => {
     setData(prev => ({
       ...prev,
       targets: newTargets
@@ -176,14 +225,7 @@ export default function NTUSTCoursePlanner() {
     if (confirm('確定要重置所有資料嗎？此操作無法復原。')) {
         setData({
             semesters: INITIAL_SEMESTERS,
-            targets: {
-              total: 128,
-              chinese: 3,
-              english: 12,
-              gen_ed: 16,
-              pe_semesters: 6,
-              social: 1,
-            }
+            targets: { ...DEFAULT_TARGETS }
         });
     }
   }
@@ -306,6 +348,7 @@ export default function NTUSTCoursePlanner() {
             name: name,
             credits: credits,
             category: category,
+            program: 'home',
             dimension: dimension,
             grade: grade
         };
@@ -342,21 +385,19 @@ export default function NTUSTCoursePlanner() {
     }
   };
 
-  // 修改載入判斷：如果是訪客模式，就不需要等待 dataLoading (因為沒有雲端資料要載入)
   if (authLoading || (session && dataLoading)) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">載入中...</div>;
   }
 
-  // 修改登入判斷：如果沒有 session 且不是訪客模式，顯示登入頁
-  if (!session && !isGuestMode) {
-    return <AuthPage onGuestLogin={() => setIsGuestMode(true)} />;
+  if (!session && !isDemoMode) {
+    return <AuthPage onDemoLogin={() => setIsDemoMode(true)} />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar 
-        userEmail={session?.user?.email || "訪客 (資料僅暫存)"} // 顯示訪客標示
-        syncStatus={session ? syncStatus : 'idle'} // 訪客模式不顯示同步狀態
+        userEmail={session?.user?.email || "功能演示模式"}
+        syncStatus={session ? syncStatus : 'idle'}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onImport={parseAndImportData}
         onReset={resetData}
@@ -372,6 +413,8 @@ export default function NTUSTCoursePlanner() {
             onDelete={handleDelete} 
             onAdd={handleOpenAdd} 
             onOpenDetail={handleOpenDetail}
+            onMoveCourse={handleMoveCourse}
+            onSortByCategory={handleSortCoursesByCategory}
           />
         </div>
       </main>

@@ -10,14 +10,16 @@ interface ProgressBarProps {
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ current, target, label, subLabel, colorClass, isCount = false }) => {
-  const percentage = Math.min(100, (current / target) * 100);
+  const percentage = target > 0 ? Math.min(100, (current / target) * 100) : 0;
+  const unit = isCount ? '學期' : '學分';
   
   return (
     <div className="mb-3">
       <div className="flex justify-between items-end mb-1">
         <span className="text-sm font-medium text-gray-700">{label}</span>
         <span className="text-xs text-gray-500">
-          {current} / {target} {isCount ? '學期' : '學分'} {subLabel && <span className="ml-1">({subLabel})</span>}
+          {target > 0 ? `${current} / ${target} ${unit}` : `${current} ${unit} / 未設定`}
+          {subLabel && <span className="ml-1">({subLabel})</span>}
         </span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2.5">

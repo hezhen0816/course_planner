@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, User, Calculator, Award, Trash2, Plus, FileText, Save, 
-  Mail, MapPin, Clock, Link as LinkIcon 
+  Mail, MapPin, Clock, Link as LinkIcon, Copy, ChevronUp, ChevronDown, MoreHorizontal
 } from 'lucide-react';
 import type { Course, CourseDetails, GradingItem, CourseCategory } from '../types';
 
@@ -17,12 +17,14 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
   isOpen, onClose, course, semesterId, onSave 
 }) => {
   const [detailData, setDetailData] = useState<CourseDetails>({ gradingPolicy: [] });
+  const [openGradingMenuId, setOpenGradingMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && course) {
       setDetailData(course.details || { 
         professor: '', email: '', location: '', time: '', link: '', notes: '', gradingPolicy: [] 
       });
+      setOpenGradingMenuId(null);
     }
   }, [isOpen, course]);
 
@@ -94,6 +96,45 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
         item.id === id ? { ...item, [field]: value } : item
       )
     }));
+  };
+
+  const duplicateGradingItem = (id: string) => {
+    setDetailData(prev => {
+      const index = prev.gradingPolicy.findIndex(item => item.id === id);
+      if (index === -1) return prev;
+
+      const itemToDuplicate = prev.gradingPolicy[index];
+      const duplicatedItem: GradingItem = {
+        ...itemToDuplicate,
+        id: `${Date.now()}-${Math.random()}`,
+      };
+
+      const nextGradingPolicy = [...prev.gradingPolicy];
+      nextGradingPolicy.splice(index + 1, 0, duplicatedItem);
+
+      return {
+        ...prev,
+        gradingPolicy: nextGradingPolicy
+      };
+    });
+  };
+
+  const moveGradingItem = (id: string, direction: 'up' | 'down') => {
+    setDetailData(prev => {
+      const index = prev.gradingPolicy.findIndex(item => item.id === id);
+      if (index === -1) return prev;
+
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.gradingPolicy.length) return prev;
+
+      const nextGradingPolicy = [...prev.gradingPolicy];
+      [nextGradingPolicy[index], nextGradingPolicy[targetIndex]] = [nextGradingPolicy[targetIndex], nextGradingPolicy[index]];
+
+      return {
+        ...prev,
+        gradingPolicy: nextGradingPolicy
+      };
+    });
   };
 
   const handleSave = () => {
@@ -235,55 +276,106 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
   
                     {/* 評分項目列表 */}
                     <div className="space-y-3">
-                       {detailData.gradingPolicy.map((item) => {
+                       {detailData.gradingPolicy.map((item, index) => {
                            const itemWeightedScore = (item.weight * (item.score || 0)) / 100;
                            return (
-                            <div key={item.id} className="flex flex-col sm:flex-row gap-3 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                {/* 左側: 項目名稱與權重 */}
-                                <div className="flex-1 w-full flex gap-2">
+                            <div key={item.id} className="relative bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                              <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_230px_90px_40px] gap-3 md:items-center">
+                                <input 
+                                  type="text" 
+                                  placeholder="項目"
+                                  value={item.name}
+                                  onChange={(e) => updateGradingItem(item.id, 'name', e.target.value)}
+                                  className="min-w-0 font-semibold text-slate-700 bg-transparent outline-none"
+                                />
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <div className="text-[11px] text-slate-400 mb-1">權重 (%)</div>
                                     <input 
-                                        type="text" 
-                                        placeholder="項目" 
-                                        value={item.name}
-                                        onChange={(e) => updateGradingItem(item.id, 'name', e.target.value)}
-                                        className="flex-1 min-w-0 font-medium text-slate-700 bg-transparent outline-none"
+                                      type="number"
+                                      placeholder="0"
+                                      value={item.weight || ''}
+                                      onChange={(e) => updateGradingItem(item.id, 'weight', Number(e.target.value))}
+                                      className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-right font-bold text-slate-600 outline-none"
                                     />
-                                    <div className="relative w-20 flex-shrink-0">
-                                        <input 
-                                            type="number" 
-                                            placeholder="權重"
-                                            value={item.weight || ''}
-                                            onChange={(e) => updateGradingItem(item.id, 'weight', Number(e.target.value))}
-                                            className="w-full text-right font-bold text-slate-600 bg-slate-50 rounded px-1 outline-none"
-                                        />
-                                        <span className="absolute right-[-10px] top-0 text-slate-400 text-sm">%</span>
-                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[11px] text-slate-400 mb-1">得分</div>
+                                    <input 
+                                      type="number"
+                                      placeholder="--"
+                                      value={item.score !== undefined ? item.score : ''}
+                                      onChange={(e) => updateGradingItem(item.id, 'score', e.target.value === '' ? undefined : Number(e.target.value))}
+                                      className={`w-full px-2 py-1.5 rounded-lg border text-center font-bold outline-none transition-all ${item.score !== undefined ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}
+                                    />
+                                  </div>
                                 </div>
-                                
-                                <div className="hidden sm:block w-px h-8 bg-slate-100 mx-2"></div>
-  
-                                {/* 右側: 實際得分輸入與折合分數 */}
-                                <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-slate-400 font-bold">得分</span>
-                                        <input 
-                                            type="number" 
-                                            placeholder="?"
-                                            value={item.score !== undefined ? item.score : ''}
-                                            onChange={(e) => updateGradingItem(item.id, 'score', e.target.value === '' ? undefined : Number(e.target.value))}
-                                            className={`w-20 px-3 py-1.5 rounded-lg border text-center font-bold outline-none transition-all ${item.score !== undefined ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}
-                                        />
-                                    </div>
-                                    <div className="text-right w-16">
-                                        <div className="text-xs text-slate-400">折合</div>
-                                        <div className="font-bold text-slate-800">
-                                            {item.score !== undefined ? itemWeightedScore.toFixed(1) : '-'}
-                                        </div>
-                                    </div>
-                                    <button onClick={() => removeGradingItem(item.id)} className="text-slate-300 hover:text-red-400 p-1">
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
+
+                                <div className="text-left md:text-right">
+                                  <div className="text-[11px] text-slate-400 mb-1">折合</div>
+                                  <div className="font-bold text-slate-800">
+                                    {item.score !== undefined ? itemWeightedScore.toFixed(1) : '-'}
+                                  </div>
                                 </div>
+
+                                <div className="relative flex md:justify-end">
+                                  <button
+                                    onClick={() => setOpenGradingMenuId(prev => (prev === item.id ? null : item.id))}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                                    title="更多操作"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {openGradingMenuId === item.id && (
+                                <div className="absolute right-3 top-12 z-30 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+                                  <button
+                                    onClick={() => {
+                                      moveGradingItem(item.id, 'up');
+                                      setOpenGradingMenuId(null);
+                                    }}
+                                    disabled={index === 0}
+                                    className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-40 disabled:hover:bg-white"
+                                  >
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                    上移
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      moveGradingItem(item.id, 'down');
+                                      setOpenGradingMenuId(null);
+                                    }}
+                                    disabled={index === detailData.gradingPolicy.length - 1}
+                                    className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-40 disabled:hover:bg-white"
+                                  >
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                    下移
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      duplicateGradingItem(item.id);
+                                      setOpenGradingMenuId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                    複製
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      removeGradingItem(item.id);
+                                      setOpenGradingMenuId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    刪除
+                                  </button>
+                                </div>
+                              )}
                             </div>
                            )
                        })}
