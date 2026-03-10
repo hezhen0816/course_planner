@@ -1,0 +1,170 @@
+[
+  {
+    "category": "其他選修",
+    "courseCode": "CC101A",
+    "courseName": "英文字彙與閱讀(上)",
+    "academicTerm": "1141",
+    "grade": "B+",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CC101B",
+    "courseName": "英文字彙與閱讀(下)",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CC105A",
+    "courseName": "英語口語訓練(上)",
+    "academicTerm": "1141",
+    "grade": "A-",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CC105B",
+    "courseName": "英語口語訓練(下)",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CC1253",
+    "courseName": "表達與文學閱讀",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CC1257",
+    "courseName": "新生中文說寫專題",
+    "academicTerm": "1141",
+    "grade": "A",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS1003",
+    "courseName": "計算機程式設計",
+    "academicTerm": "1141",
+    "grade": "B",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS1004",
+    "courseName": "計算機程式設計實習",
+    "academicTerm": "1141",
+    "grade": "B",
+    "earnedCredits": "1"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS1005",
+    "courseName": "資訊工程導論",
+    "academicTerm": "1141",
+    "grade": "B",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS1006",
+    "courseName": "線性代數 ★",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS1010",
+    "courseName": "物件導向程式設計實習",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "1"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS3003",
+    "courseName": "離散數學",
+    "academicTerm": "1141",
+    "grade": "A+",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "CS3005",
+    "courseName": "物件導向程式設計",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "ECG003",
+    "courseName": "台灣電資產業論壇與工程倫理",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "GE3725",
+    "courseName": "消費者保護法",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "GE3731",
+    "courseName": "科技與法律",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "2"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "HC162A",
+    "courseName": "微積分(上)",
+    "academicTerm": "1141",
+    "grade": "A-",
+    "earnedCredits": "4"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "HC162B",
+    "courseName": "微積分(下)",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "4"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "MIG002",
+    "courseName": "物聯網導論",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "3"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "PE139A",
+    "courseName": "體育(重量訓練)(上)",
+    "academicTerm": "1141",
+    "grade": "A",
+    "earnedCredits": "0"
+  },
+  {
+    "category": "其他選修",
+    "courseCode": "PE139B",
+    "courseName": "體育(重量訓練)(下)",
+    "academicTerm": "1142",
+    "grade": "修習中",
+    "earnedCredits": "0"
+  }
+]

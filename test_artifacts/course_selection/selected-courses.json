@@ -1,0 +1,98 @@
+[
+  {
+    "courseCode": "CC101B033",
+    "courseName": "英文字彙與閱讀(下)",
+    "credits": 2.0,
+    "requiredType": "必修",
+    "professor": "陳茗宜",
+    "note": ""
+  },
+  {
+    "courseCode": "CC105B023",
+    "courseName": "英語口語訓練(下)",
+    "credits": 2.0,
+    "requiredType": "必修",
+    "professor": "林琦鎮",
+    "note": ""
+  },
+  {
+    "courseCode": "CC1253303",
+    "courseName": "表達與文學閱讀",
+    "credits": 3.0,
+    "requiredType": "必修",
+    "professor": "王淑芬",
+    "note": ""
+  },
+  {
+    "courseCode": "CS1006301",
+    "courseName": "線性代數",
+    "credits": 3.0,
+    "requiredType": "必修",
+    "professor": "項天瑞",
+    "note": ""
+  },
+  {
+    "courseCode": "CS1010301",
+    "courseName": "物件導向程式設計實習",
+    "credits": 1.0,
+    "requiredType": "必修",
+    "professor": "戴文凱",
+    "note": ""
+  },
+  {
+    "courseCode": "CS3005301",
+    "courseName": "物件導向程式設計",
+    "credits": 3.0,
+    "requiredType": "必修",
+    "professor": "戴文凱",
+    "note": ""
+  },
+  {
+    "courseCode": "ECG003301",
+    "courseName": "台灣電資產業論壇與工程倫理",
+    "credits": 2.0,
+    "requiredType": "必修",
+    "professor": "多位教師",
+    "note": ""
+  },
+  {
+    "courseCode": "GE3725301",
+    "courseName": "消費者保護法",
+    "credits": 2.0,
+    "requiredType": "必修",
+    "professor": "林瑞珠",
+    "note": ""
+  },
+  {
+    "courseCode": "GE3731301",
+    "courseName": "科技與法律",
+    "credits": 2.0,
+    "requiredType": "必修",
+    "professor": "林瑞珠",
+    "note": ""
+  },
+  {
+    "courseCode": "HC162B001",
+    "courseName": "微積分(下)",
+    "credits": 4.0,
+    "requiredType": "必修",
+    "professor": "王鵬凱",
+    "note": ""
+  },
+  {
+    "courseCode": "MIG002301",
+    "courseName": "物聯網導論",
+    "credits": 3.0,
+    "requiredType": "必修",
+    "professor": "蔡佳倫",
+    "note": ""
+  },
+  {
+    "courseCode": "PE139B021",
+    "courseName": "體育(重量訓練)(下)",
+    "credits": 0.0,
+    "requiredType": "必修",
+    "professor": "翁睿忱",
+    "note": ""
+  }
+]

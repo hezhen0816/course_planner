@@ -30,4 +30,5 @@ __pycache__/
 *.pyc
 
 # Local test/debug artifacts
-test_artifacts/
+test_artifacts/**/.venv/
+test_artifacts/**/__pycache__/

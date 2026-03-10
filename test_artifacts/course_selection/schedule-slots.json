@@ -1,0 +1,266 @@
+[
+  {
+    "weekday": "星期三",
+    "period": "1",
+    "time": "08:10～ 09:00",
+    "courseName": "英語口語訓練(下)",
+    "location": "TR-610",
+    "raw": "英語口語訓練(下) | TR-610"
+  },
+  {
+    "weekday": "星期二",
+    "period": "2",
+    "time": "9:10～ 10:00",
+    "courseName": "表達與文學閱讀",
+    "location": "TR-213",
+    "raw": "表達與文學閱讀 | TR-213"
+  },
+  {
+    "weekday": "星期三",
+    "period": "2",
+    "time": "9:10～ 10:00",
+    "courseName": "英語口語訓練(下)",
+    "location": "TR-610",
+    "raw": "英語口語訓練(下) | TR-610"
+  },
+  {
+    "weekday": "星期四",
+    "period": "2",
+    "time": "9:10～ 10:00",
+    "courseName": "線性代數",
+    "location": "TR-411",
+    "raw": "線性代數 | TR-411"
+  },
+  {
+    "weekday": "星期一",
+    "period": "3",
+    "time": "10:20～ 11:10",
+    "courseName": "線性代數",
+    "location": "TR-411",
+    "raw": "線性代數 | TR-411"
+  },
+  {
+    "weekday": "星期二",
+    "period": "3",
+    "time": "10:20～ 11:10",
+    "courseName": "表達與文學閱讀",
+    "location": "TR-213",
+    "raw": "表達與文學閱讀 | TR-213"
+  },
+  {
+    "weekday": "星期三",
+    "period": "3",
+    "time": "10:20～ 11:10",
+    "courseName": "英文字彙與閱讀(下)",
+    "location": "TR-615",
+    "raw": "英文字彙與閱讀(下) | TR-615"
+  },
+  {
+    "weekday": "星期四",
+    "period": "3",
+    "time": "10:20～ 11:10",
+    "courseName": "消費者保護法",
+    "location": "AU-101",
+    "raw": "消費者保護法 | AU-101"
+  },
+  {
+    "weekday": "星期一",
+    "period": "4",
+    "time": "11:20～ 12:10",
+    "courseName": "線性代數",
+    "location": "TR-411",
+    "raw": "線性代數 | TR-411"
+  },
+  {
+    "weekday": "星期二",
+    "period": "4",
+    "time": "11:20～ 12:10",
+    "courseName": "表達與文學閱讀",
+    "location": "TR-213",
+    "raw": "表達與文學閱讀 | TR-213"
+  },
+  {
+    "weekday": "星期三",
+    "period": "4",
+    "time": "11:20～ 12:10",
+    "courseName": "英文字彙與閱讀(下)",
+    "location": "TR-615",
+    "raw": "英文字彙與閱讀(下) | TR-615"
+  },
+  {
+    "weekday": "星期四",
+    "period": "4",
+    "time": "11:20～ 12:10",
+    "courseName": "消費者保護法",
+    "location": "AU-101",
+    "raw": "消費者保護法 | AU-101"
+  },
+  {
+    "weekday": "星期二",
+    "period": "6",
+    "time": "13:20～ 14:10",
+    "courseName": "物件導向程式設計",
+    "location": "TR-311",
+    "raw": "物件導向程式設計 | TR-311"
+  },
+  {
+    "weekday": "星期三",
+    "period": "6",
+    "time": "13:20～ 14:10",
+    "courseName": "物件導向程式設計實習",
+    "location": "RB-509",
+    "raw": "物件導向程式設計實習 | RB-509"
+  },
+  {
+    "weekday": "星期四",
+    "period": "6",
+    "time": "13:20～ 14:10",
+    "courseName": "科技與法律",
+    "location": "T4-303",
+    "raw": "科技與法律 | T4-303"
+  },
+  {
+    "weekday": "星期五",
+    "period": "6",
+    "time": "13:20～ 14:10",
+    "courseName": "微積分(下)",
+    "location": "TR-512",
+    "raw": "微積分(下) | TR-512"
+  },
+  {
+    "weekday": "星期二",
+    "period": "7",
+    "time": "14:20～ 15:10",
+    "courseName": "物件導向程式設計",
+    "location": "TR-311",
+    "raw": "物件導向程式設計 | TR-311"
+  },
+  {
+    "weekday": "星期三",
+    "period": "7",
+    "time": "14:20～ 15:10",
+    "courseName": "物件導向程式設計實習",
+    "location": "RB-509",
+    "raw": "物件導向程式設計實習 | RB-509"
+  },
+  {
+    "weekday": "星期四",
+    "period": "7",
+    "time": "14:20～ 15:10",
+    "courseName": "科技與法律",
+    "location": "T4-303",
+    "raw": "科技與法律 | T4-303"
+  },
+  {
+    "weekday": "星期五",
+    "period": "7",
+    "time": "14:20～ 15:10",
+    "courseName": "微積分(下)",
+    "location": "TR-512",
+    "raw": "微積分(下) | TR-512"
+  },
+  {
+    "weekday": "星期一",
+    "period": "8",
+    "time": "15:30～ 16:20",
+    "courseName": "微積分(下)",
+    "location": "TR-512",
+    "raw": "微積分(下) | TR-512"
+  },
+  {
+    "weekday": "星期二",
+    "period": "8",
+    "time": "15:30～ 16:20",
+    "courseName": "物件導向程式設計",
+    "location": "TR-311",
+    "raw": "物件導向程式設計 | TR-311"
+  },
+  {
+    "weekday": "星期三",
+    "period": "8",
+    "time": "15:30～ 16:20",
+    "courseName": "物件導向程式設計實習",
+    "location": "RB-509",
+    "raw": "物件導向程式設計實習 | RB-509"
+  },
+  {
+    "weekday": "星期一",
+    "period": "9",
+    "time": "16:30～ 17:20",
+    "courseName": "微積分(下)",
+    "location": "TR-512",
+    "raw": "微積分(下) | TR-512"
+  },
+  {
+    "weekday": "星期二",
+    "period": "9",
+    "time": "16:30～ 17:20",
+    "courseName": "體育(重量訓練)(下)",
+    "location": "",
+    "raw": "體育(重量訓練)(下)"
+  },
+  {
+    "weekday": "星期一",
+    "period": "10",
+    "time": "17:30～ 18:20",
+    "courseName": "微積分(下)",
+    "location": "TR-512",
+    "raw": "微積分(下) | TR-512"
+  },
+  {
+    "weekday": "星期二",
+    "period": "10",
+    "time": "17:30～ 18:20",
+    "courseName": "體育(重量訓練)(下)",
+    "location": "",
+    "raw": "體育(重量訓練)(下)"
+  },
+  {
+    "weekday": "星期三",
+    "period": "A",
+    "time": "18:25～ 19:15",
+    "courseName": "物聯網導論",
+    "location": "MA-303",
+    "raw": "物聯網導論 | MA-303"
+  },
+  {
+    "weekday": "星期四",
+    "period": "A",
+    "time": "18:25～ 19:15",
+    "courseName": "台灣電資產業論壇與工程倫理",
+    "location": "RB-105",
+    "raw": "台灣電資產業論壇與工程倫理 | RB-105"
+  },
+  {
+    "weekday": "星期三",
+    "period": "B",
+    "time": "19:20～ 20:10",
+    "courseName": "物聯網導論",
+    "location": "MA-303",
+    "raw": "物聯網導論 | MA-303"
+  },
+  {
+    "weekday": "星期四",
+    "period": "B",
+    "time": "19:20～ 20:10",
+    "courseName": "台灣電資產業論壇與工程倫理",
+    "location": "RB-105",
+    "raw": "台灣電資產業論壇與工程倫理 | RB-105"
+  },
+  {
+    "weekday": "星期三",
+    "period": "C",
+    "time": "20:15～ 21:05",
+    "courseName": "物聯網導論",
+    "location": "MA-303",
+    "raw": "物聯網導論 | MA-303"
+  },
+  {
+    "weekday": "星期四",
+    "period": "C",
+    "time": "20:15～ 21:05",
+    "courseName": "台灣電資產業論壇與工程倫理",
+    "location": "RB-105",
+    "raw": "台灣電資產業論壇與工程倫理 | RB-105"
+  }
+]
