@@ -244,6 +244,19 @@ def submit_hidden_form(
     return response
 
 
+def requires_hidden_form_callback(page_response: requests.Response) -> bool:
+    if "signin-oidc" in page_response.url:
+        return True
+
+    soup = BeautifulSoup(page_response.text, "html.parser")
+    form = soup.find("form")
+    if not isinstance(form, Tag):
+        return False
+
+    action = urljoin(page_response.url, form.get("action", ""))
+    return "auth/oidc" in action or "signin-oidc" in action
+
+
 def login_to_target(
     session: requests.Session,
     username: str,
@@ -279,7 +292,7 @@ def login_to_target(
     )
     login_response.raise_for_status()
 
-    if "signin-oidc" in login_response.url:
+    if requires_hidden_form_callback(login_response):
         login_response = submit_hidden_form(session, login_response, verify_ssl)
 
     if "login" in login_response.url.lower() and "ssoam" in login_response.url:
@@ -296,7 +309,7 @@ def login_to_target(
     )
     page_response.raise_for_status()
 
-    if "signin-oidc" in page_response.url:
+    if requires_hidden_form_callback(page_response):
         page_response = submit_hidden_form(session, page_response, verify_ssl)
         page_response = session.get(
             target_url,
@@ -347,7 +360,7 @@ def login(session: requests.Session, username: str, password: str, verify_ssl: b
     )
     login_response.raise_for_status()
 
-    if "signin-oidc" in login_response.url:
+    if requires_hidden_form_callback(login_response):
         login_response = submit_hidden_form(session, login_response, verify_ssl)
 
     if "login" in login_response.url.lower() and "ssoam" in login_response.url:
@@ -364,7 +377,7 @@ def login(session: requests.Session, username: str, password: str, verify_ssl: b
     )
     verify_response.raise_for_status()
 
-    if "signin-oidc" in verify_response.url:
+    if requires_hidden_form_callback(verify_response):
         verify_response = submit_hidden_form(session, verify_response, verify_ssl)
 
     if "login" in verify_response.url.lower() or "ssoam" in verify_response.url:

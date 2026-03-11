@@ -460,7 +460,7 @@ final class AppSessionStore: ObservableObject {
             let payload = try decoder.decode(MoodleAssignmentsResponse.self, from: data)
             apply(payload: payload)
         } catch {
-            moodleAssignmentsErrorMessage = error.localizedDescription
+            moodleAssignmentsErrorMessage = friendlyMoodleAssignmentsErrorMessage(for: error)
         }
     }
 
@@ -487,7 +487,7 @@ final class AppSessionStore: ObservableObject {
                 return
             }
             if !suppressErrors {
-                moodleAssignmentsErrorMessage = error.localizedDescription
+                moodleAssignmentsErrorMessage = friendlyMoodleAssignmentsErrorMessage(for: error)
             }
         }
     }
@@ -1071,6 +1071,14 @@ final class AppSessionStore: ObservableObject {
         moodleAssignments = []
         moodleAssignmentsSyncedAt = nil
         moodleAssignmentsFilterLabel = ""
+    }
+
+    private func friendlyMoodleAssignmentsErrorMessage(for error: Error) -> String {
+        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        if message.contains("connect/authorize") || message.contains("登入後無法進入目標頁面") {
+            return "Moodle 登入後沒有完成驗證流程，請稍後再試。"
+        }
+        return message
     }
 
     private func apply(payload: ScheduleSyncResponse) {
