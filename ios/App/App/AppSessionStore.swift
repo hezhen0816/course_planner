@@ -297,6 +297,22 @@ final class AppSessionStore: ObservableObject {
         }
     }
 
+    func refreshHomeContent() async {
+        guard isAuthenticated else {
+            return
+        }
+
+        await refreshAppContent(suppressErrors: false)
+
+        let username = schoolAccount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let password = schoolPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !username.isEmpty, !password.isEmpty else {
+            return
+        }
+
+        await syncMoodleAssignments()
+    }
+
     func syncSchedule() async {
         let username = schoolAccount.trimmingCharacters(in: .whitespacesAndNewlines)
         let password = schoolPassword.trimmingCharacters(in: .whitespacesAndNewlines)

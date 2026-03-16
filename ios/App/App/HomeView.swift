@@ -25,7 +25,7 @@ struct HomeView: View {
                 .padding(.bottom, 32)
             }
             .refreshable {
-                await store.refreshAppContent(suppressErrors: false)
+                await store.refreshHomeContent()
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -225,10 +225,10 @@ struct HomeView: View {
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "zh_Hant_TW")
             formatter.dateFormat = "M/d HH:mm"
-            let filterLabel = nonEmptyText(store.moodleAssignmentsFilterLabel) ?? "近期"
+            let filterLabel = nonEmptyText(store.moodleAssignmentsFilterLabel) ?? "往後30天"
             return "\(filterLabel)・上次更新 \(formatter.string(from: syncedAt))"
         }
-        return "同步 Moodle 後，會顯示近期需要繳交的作業"
+        return "同步 Moodle 後，會顯示往後30天需要繳交的作業"
     }
 
     private var progressSnapshot: some View {

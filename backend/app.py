@@ -725,22 +725,19 @@ def extract_moodle_timeline_config(soup: BeautifulSoup) -> dict[str, int | str]:
     if not isinstance(timeline, Tag):
         raise RuntimeError("找不到 Moodle 時間軸區塊。")
 
-    filter_label = normalize(
-        timeline.select_one("#timeline-day-filter-current-selection").get_text(" ", strip=True)
-        if timeline.select_one("#timeline-day-filter-current-selection")
-        else ""
-    )
-
     event_container = timeline.select_one('[data-region="event-list-container"]')
     view_dates = timeline.select_one('[data-region="view-dates"]')
     if not isinstance(event_container, Tag) or not isinstance(view_dates, Tag):
         raise RuntimeError("找不到 Moodle 時間軸 API 設定。")
 
+    parsed_days_limit = int(event_container.get("data-days-limit", "7"))
+    parsed_limit_num = int(view_dates.get("data-limit", "5")) + 1
+
     return {
-        "filter_label": filter_label,
+        "filter_label": "往後30天",
         "midnight": int(event_container.get("data-midnight", "0")),
-        "days_limit": int(event_container.get("data-days-limit", "7")),
-        "limit_num": int(view_dates.get("data-limit", "5")) + 1,
+        "days_limit": max(parsed_days_limit, 30),
+        "limit_num": max(parsed_limit_num, 100),
     }
 
 
