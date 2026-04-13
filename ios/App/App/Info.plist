@@ -22,8 +22,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>SupabaseAnonKey</key>
 	<string>sb_publishable_WSWkdAmi9jRhC1iwVv-o5g_MRVeYL45</string>
 	<key>SupabaseURL</key>

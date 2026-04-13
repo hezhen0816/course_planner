@@ -1,4 +1,3 @@
-import ActivityKit
 import SwiftUI
 import UserNotifications
 
@@ -102,10 +101,6 @@ final class AppSessionStore: ObservableObject {
 
     var isAuthConfigured: Bool {
         supabaseURL != nil && supabaseAnonKey != nil
-    }
-
-    func refreshLiveActivityState() async {
-        await syncCourseLiveActivity()
     }
 
     var nextUpcomingCourse: UpcomingCourse? {
@@ -1086,9 +1081,6 @@ final class AppSessionStore: ObservableObject {
         lastSyncedAt = nil
         scheduleEntries = []
         upcomingCourses = []
-        Task {
-            await syncCourseLiveActivity()
-        }
     }
 
     private func clearMoodleAssignmentsState() {
@@ -1129,7 +1121,6 @@ final class AppSessionStore: ObservableObject {
         persistCachedScheduleSnapshot()
         Task {
             await refreshClassReminders()
-            await syncCourseLiveActivity()
         }
     }
 
@@ -1283,9 +1274,6 @@ final class AppSessionStore: ObservableObject {
         lastSyncedAt = snapshot.lastSyncedAt
         scheduleEntries = snapshot.scheduleEntries
         upcomingCourses = Self.buildUpcomingCourses(from: snapshot.scheduleEntries)
-        Task {
-            await syncCourseLiveActivity()
-        }
     }
 
     private func persistCachedMoodleAssignmentsSnapshot() {
@@ -1315,66 +1303,6 @@ final class AppSessionStore: ObservableObject {
         moodleAssignments = snapshot.items.sorted { $0.dueAt < $1.dueAt }
         moodleAssignmentsSyncedAt = snapshot.syncedAt
         moodleAssignmentsFilterLabel = snapshot.filterLabel
-    }
-
-    private func currentLiveActivityContent(referenceDate: Date = Date()) -> CourseCompassLiveActivityAttributes.ContentState? {
-        let trackedCourses = scheduleEntries.map {
-            CourseCompassLiveActivityAttributes.TrackedCourse(
-                title: $0.title,
-                subtitle: $0.instructor,
-                room: $0.room,
-                timeLabel: $0.timeRange,
-                slotTimes: $0.slotTimes,
-                calendarWeekday: $0.weekday.calendarWeekday
-            )
-        }
-
-        let content = CourseCompassLiveActivityAttributes.ContentState(courses: trackedCourses)
-        guard content.resolvedDisplay(referenceDate: referenceDate) != nil else {
-            return nil
-        }
-        return content
-    }
-
-    private func syncCourseLiveActivity() async {
-        guard #available(iOS 17.0, *) else {
-            return
-        }
-
-        let activities = Activity<CourseCompassLiveActivityAttributes>.activities
-        guard let contentState = currentLiveActivityContent() else {
-            for activity in activities {
-                await activity.end(nil, dismissalPolicy: .immediate)
-            }
-            return
-        }
-
-        let attributes = CourseCompassLiveActivityAttributes(
-            studentName: studentName.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-        let staleDate = contentState.resolvedDisplay()?.countdownTarget.addingTimeInterval(60)
-        let content = ActivityContent(
-            state: contentState,
-            staleDate: staleDate
-        )
-
-        if let current = activities.first {
-            await current.update(content)
-            for activity in activities.dropFirst() {
-                await activity.end(nil, dismissalPolicy: .immediate)
-            }
-            return
-        }
-
-        do {
-            _ = try Activity<CourseCompassLiveActivityAttributes>.request(
-                attributes: attributes,
-                content: content,
-                pushType: nil
-            )
-        } catch {
-            // Keep the app flow intact if Live Activity setup fails.
-        }
     }
 
     private func refreshClassReminders() async {

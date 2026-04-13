@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -17,36 +17,7 @@
 		70A2D1162FC1000100ABC001 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1062FC1000100ABC001 /* ScheduleView.swift */; };
 		70A2D1172FC1000100ABC001 /* PlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1072FC1000100ABC001 /* PlannerView.swift */; };
 		70A2D1182FC1000100ABC001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1082FC1000100ABC001 /* SettingsView.swift */; };
-		71CCA0112FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CCA0012FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift */; };
-		71CCA0122FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 71CCA0052FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		71CCA0132FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CCA0012FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift */; };
-		71CCA0142FD1000100ABC001 /* CourseCompassLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CCA0022FD1000100ABC001 /* CourseCompassLiveActivityBundle.swift */; };
-		71CCA0152FD1000100ABC001 /* CourseCompassLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CCA0032FD1000100ABC001 /* CourseCompassLiveActivityWidget.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		71CCA0412FD1000100ABC001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 71CCA0402FD1000100ABC001;
-			remoteInfo = CourseCompassLiveActivityExtension;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		71CCA0302FD1000100ABC001 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				71CCA0122FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -61,23 +32,11 @@
 		70A2D1062FC1000100ABC001 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		70A2D1072FC1000100ABC001 /* PlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerView.swift; sourceTree = "<group>"; };
 		70A2D1082FC1000100ABC001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		71CCA0012FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseCompassLiveActivityAttributes.swift; sourceTree = "<group>"; };
-		71CCA0022FD1000100ABC001 /* CourseCompassLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseCompassLiveActivityBundle.swift; sourceTree = "<group>"; };
-		71CCA0032FD1000100ABC001 /* CourseCompassLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseCompassLiveActivityWidget.swift; sourceTree = "<group>"; };
-		71CCA0042FD1000100ABC001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		71CCA0052FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CourseCompassLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		504EC3011FED79650016851F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		71CCA0312FD1000100ABC001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -92,7 +51,6 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
-				71CCA0202FD1000100ABC001 /* CourseCompassLiveActivityExtension */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,7 +59,6 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
-				71CCA0052FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,7 +68,6 @@
 			children = (
 				70A2D1002FC1000100ABC001 /* App.swift */,
 				70A2D1022FC1000100ABC001 /* AppShellView.swift */,
-				71CCA0012FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift */,
 				70A2D1032FC1000100ABC001 /* NativeModels.swift */,
 				70A2D1042FC1000100ABC001 /* AppSessionStore.swift */,
 				70A2D1052FC1000100ABC001 /* HomeView.swift */,
@@ -125,16 +81,6 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		71CCA0202FD1000100ABC001 /* CourseCompassLiveActivityExtension */ = {
-			isa = PBXGroup;
-			children = (
-				71CCA0022FD1000100ABC001 /* CourseCompassLiveActivityBundle.swift */,
-				71CCA0032FD1000100ABC001 /* CourseCompassLiveActivityWidget.swift */,
-				71CCA0042FD1000100ABC001 /* Info.plist */,
-			);
-			path = CourseCompassLiveActivityExtension;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -145,12 +91,10 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
-				71CCA0302FD1000100ABC001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				71CCA0422FD1000100ABC001 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -159,42 +103,18 @@
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
 		};
-		71CCA0402FD1000100ABC001 /* CourseCompassLiveActivityExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 71CCA0502FD1000100ABC001 /* Build configuration list for PBXNativeTarget "CourseCompassLiveActivityExtension" */;
-			buildPhases = (
-				71CCA0332FD1000100ABC001 /* Sources */,
-				71CCA0312FD1000100ABC001 /* Frameworks */,
-				71CCA0322FD1000100ABC001 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = CourseCompassLiveActivityExtension;
-			packageProductDependencies = (
-			);
-			productName = CourseCompassLiveActivityExtension;
-			productReference = 71CCA0052FD1000100ABC001 /* CourseCompassLiveActivityExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		504EC2FC1FED79650016851F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 0920;
 				TargetAttributes = {
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
-						ProvisioningStyle = Automatic;
-					};
-					71CCA0402FD1000100ABC001 = {
-						CreatedOnToolsVersion = 17.0;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -213,7 +133,6 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
-				71CCA0402FD1000100ABC001 /* CourseCompassLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -228,13 +147,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		71CCA0322FD1000100ABC001 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -242,7 +154,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				71CCA0112FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift in Sources */,
 				70A2D1142FC1000100ABC001 /* AppSessionStore.swift in Sources */,
 				70A2D1102FC1000100ABC001 /* App.swift in Sources */,
 				70A2D1132FC1000100ABC001 /* NativeModels.swift in Sources */,
@@ -254,25 +165,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		71CCA0332FD1000100ABC001 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				71CCA0132FD1000100ABC001 /* CourseCompassLiveActivityAttributes.swift in Sources */,
-				71CCA0142FD1000100ABC001 /* CourseCompassLiveActivityBundle.swift in Sources */,
-				71CCA0152FD1000100ABC001 /* CourseCompassLiveActivityWidget.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		71CCA0422FD1000100ABC001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 71CCA0402FD1000100ABC001 /* CourseCompassLiveActivityExtension */;
-			targetProxy = 71CCA0412FD1000100ABC001 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC3101FED79650016851F /* LaunchScreen.storyboard */ = {
@@ -301,7 +194,6 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -309,10 +201,8 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -322,10 +212,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = ZX2K469XNX;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -344,7 +232,6 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -364,7 +251,6 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -372,10 +258,8 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -385,10 +269,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = ZX2K469XNX;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -400,7 +282,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
@@ -414,6 +295,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZX2K469XNX;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -436,6 +318,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZX2K469XNX;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -446,53 +329,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.hezhen.courseplanner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		71CCA0512FD1000100ABC001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = CourseCompassLiveActivityExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.hezhen.courseplanner.liveactivity;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		71CCA0522FD1000100ABC001 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = CourseCompassLiveActivityExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.hezhen.courseplanner.liveactivity;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -519,16 +355,8 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		71CCA0502FD1000100ABC001 /* Build configuration list for PBXNativeTarget "CourseCompassLiveActivityExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				71CCA0512FD1000100ABC001 /* Debug */,
-				71CCA0522FD1000100ABC001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
 	};
 	rootObject = 504EC2FC1FED79650016851F /* Project object */;
 }
