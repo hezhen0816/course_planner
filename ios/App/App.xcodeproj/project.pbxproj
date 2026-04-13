@@ -18,6 +18,19 @@
 		70A2D1172FC1000100ABC001 /* PlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1072FC1000100ABC001 /* PlannerView.swift */; };
 		70A2D1182FC1000100ABC001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1082FC1000100ABC001 /* SettingsView.swift */; };
 		70A2D11A2FC1000100ABC001 /* FreeRoomsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1192FC1000100ABC001 /* FreeRoomsView.swift */; };
+		70A2D1212FC1000100ABC001 /* AppSessionStore+Auth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1202FC1000100ABC001 /* AppSessionStore+Auth.swift */; };
+		70A2D1232FC1000100ABC001 /* AppSessionStore+PlannerCloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1222FC1000100ABC001 /* AppSessionStore+PlannerCloud.swift */; };
+		70A2D1252FC1000100ABC001 /* AppSessionStore+ScheduleSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1242FC1000100ABC001 /* AppSessionStore+ScheduleSync.swift */; };
+		70A2D1272FC1000100ABC001 /* AppSessionStore+HistoryImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1262FC1000100ABC001 /* AppSessionStore+HistoryImport.swift */; };
+		70A2D1292FC1000100ABC001 /* AppSessionStore+MoodleAssignments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1282FC1000100ABC001 /* AppSessionStore+MoodleAssignments.swift */; };
+		70A2D12B2FC1000100ABC001 /* AppSessionStore+LocalCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D12A2FC1000100ABC001 /* AppSessionStore+LocalCache.swift */; };
+		70A2D12D2FC1000100ABC001 /* AppSessionStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D12C2FC1000100ABC001 /* AppSessionStore+Notifications.swift */; };
+		70A2D12F2FC1000100ABC001 /* AppSessionStore+Networking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D12E2FC1000100ABC001 /* AppSessionStore+Networking.swift */; };
+		70A2D1312FC1000100ABC001 /* PlannerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1302FC1000100ABC001 /* PlannerModels.swift */; };
+		70A2D1332FC1000100ABC001 /* ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1322FC1000100ABC001 /* ScheduleModels.swift */; };
+		70A2D1352FC1000100ABC001 /* SyncAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1342FC1000100ABC001 /* SyncAPIModels.swift */; };
+		70A2D1372FC1000100ABC001 /* CloudModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1362FC1000100ABC001 /* CloudModels.swift */; };
+		70A2D1392FC1000100ABC001 /* InfoMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2D1382FC1000100ABC001 /* InfoMessage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +47,19 @@
 		70A2D1072FC1000100ABC001 /* PlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerView.swift; sourceTree = "<group>"; };
 		70A2D1082FC1000100ABC001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		70A2D1192FC1000100ABC001 /* FreeRoomsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeRoomsView.swift; sourceTree = "<group>"; };
+		70A2D1202FC1000100ABC001 /* AppSessionStore+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+Auth.swift"; sourceTree = "<group>"; };
+		70A2D1222FC1000100ABC001 /* AppSessionStore+PlannerCloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+PlannerCloud.swift"; sourceTree = "<group>"; };
+		70A2D1242FC1000100ABC001 /* AppSessionStore+ScheduleSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+ScheduleSync.swift"; sourceTree = "<group>"; };
+		70A2D1262FC1000100ABC001 /* AppSessionStore+HistoryImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+HistoryImport.swift"; sourceTree = "<group>"; };
+		70A2D1282FC1000100ABC001 /* AppSessionStore+MoodleAssignments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+MoodleAssignments.swift"; sourceTree = "<group>"; };
+		70A2D12A2FC1000100ABC001 /* AppSessionStore+LocalCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+LocalCache.swift"; sourceTree = "<group>"; };
+		70A2D12C2FC1000100ABC001 /* AppSessionStore+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+Notifications.swift"; sourceTree = "<group>"; };
+		70A2D12E2FC1000100ABC001 /* AppSessionStore+Networking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppSessionStore+Networking.swift"; sourceTree = "<group>"; };
+		70A2D1302FC1000100ABC001 /* PlannerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerModels.swift; sourceTree = "<group>"; };
+		70A2D1322FC1000100ABC001 /* ScheduleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleModels.swift; sourceTree = "<group>"; };
+		70A2D1342FC1000100ABC001 /* SyncAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAPIModels.swift; sourceTree = "<group>"; };
+		70A2D1362FC1000100ABC001 /* CloudModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudModels.swift; sourceTree = "<group>"; };
+		70A2D1382FC1000100ABC001 /* InfoMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoMessage.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -71,7 +97,20 @@
 				70A2D1002FC1000100ABC001 /* App.swift */,
 				70A2D1022FC1000100ABC001 /* AppShellView.swift */,
 				70A2D1032FC1000100ABC001 /* NativeModels.swift */,
+				70A2D1302FC1000100ABC001 /* PlannerModels.swift */,
+				70A2D1322FC1000100ABC001 /* ScheduleModels.swift */,
+				70A2D1342FC1000100ABC001 /* SyncAPIModels.swift */,
+				70A2D1362FC1000100ABC001 /* CloudModels.swift */,
+				70A2D1382FC1000100ABC001 /* InfoMessage.swift */,
 				70A2D1042FC1000100ABC001 /* AppSessionStore.swift */,
+				70A2D1202FC1000100ABC001 /* AppSessionStore+Auth.swift */,
+				70A2D1222FC1000100ABC001 /* AppSessionStore+PlannerCloud.swift */,
+				70A2D1242FC1000100ABC001 /* AppSessionStore+ScheduleSync.swift */,
+				70A2D1262FC1000100ABC001 /* AppSessionStore+HistoryImport.swift */,
+				70A2D1282FC1000100ABC001 /* AppSessionStore+MoodleAssignments.swift */,
+				70A2D12A2FC1000100ABC001 /* AppSessionStore+LocalCache.swift */,
+				70A2D12C2FC1000100ABC001 /* AppSessionStore+Notifications.swift */,
+				70A2D12E2FC1000100ABC001 /* AppSessionStore+Networking.swift */,
 				70A2D1052FC1000100ABC001 /* HomeView.swift */,
 				70A2D1062FC1000100ABC001 /* ScheduleView.swift */,
 				70A2D1192FC1000100ABC001 /* FreeRoomsView.swift */,
@@ -158,8 +197,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				70A2D1142FC1000100ABC001 /* AppSessionStore.swift in Sources */,
+				70A2D1212FC1000100ABC001 /* AppSessionStore+Auth.swift in Sources */,
+				70A2D1232FC1000100ABC001 /* AppSessionStore+PlannerCloud.swift in Sources */,
+				70A2D1252FC1000100ABC001 /* AppSessionStore+ScheduleSync.swift in Sources */,
+				70A2D1272FC1000100ABC001 /* AppSessionStore+HistoryImport.swift in Sources */,
+				70A2D1292FC1000100ABC001 /* AppSessionStore+MoodleAssignments.swift in Sources */,
+				70A2D12B2FC1000100ABC001 /* AppSessionStore+LocalCache.swift in Sources */,
+				70A2D12D2FC1000100ABC001 /* AppSessionStore+Notifications.swift in Sources */,
+				70A2D12F2FC1000100ABC001 /* AppSessionStore+Networking.swift in Sources */,
 				70A2D1102FC1000100ABC001 /* App.swift in Sources */,
 				70A2D1132FC1000100ABC001 /* NativeModels.swift in Sources */,
+				70A2D1312FC1000100ABC001 /* PlannerModels.swift in Sources */,
+				70A2D1332FC1000100ABC001 /* ScheduleModels.swift in Sources */,
+				70A2D1352FC1000100ABC001 /* SyncAPIModels.swift in Sources */,
+				70A2D1372FC1000100ABC001 /* CloudModels.swift in Sources */,
+				70A2D1392FC1000100ABC001 /* InfoMessage.swift in Sources */,
 				70A2D1182FC1000100ABC001 /* SettingsView.swift in Sources */,
 				70A2D1162FC1000100ABC001 /* ScheduleView.swift in Sources */,
 				70A2D1122FC1000100ABC001 /* AppShellView.swift in Sources */,

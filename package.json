@@ -9,6 +9,9 @@
     "build": "npm run web:build",
     "lint": "npm run web:lint",
     "backend:dev": "python3 -m uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000 --env-file .env",
+    "backend:test": ".venv/bin/python -m pytest tests/backend",
+    "backend:check": ".venv/bin/python -m py_compile backend/*.py && .venv/bin/python -c \"import backend.app\" && (cd backend && ../.venv/bin/python -c \"import app\") && npm run backend:test",
+    "check": "npm run lint && npm run build && npm run backend:check && npm run ios:build",
     "ios:open": "open ios/App/App.xcodeproj",
     "ios:build": "xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build"
   }

@@ -247,7 +247,6 @@ export default function CoursePlannerWebApp() {
         return;
       } catch {
         // 如果選課清單解析失敗，嘗試成績列表格式
-        console.log('選課清單解析失敗，嘗試成績列表格式...');
       }
 
       // 回退到原有的成績查詢系統 HTML 格式

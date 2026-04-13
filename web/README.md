@@ -29,6 +29,7 @@ npm run web:dev
 ```bash
 npm run build
 npm run lint
+npm audit --audit-level=moderate
 ```
 
 ## 環境變數

@@ -24,6 +24,8 @@
 	<true/>
 	<key>SupabaseAnonKey</key>
 	<string>sb_publishable_WSWkdAmi9jRhC1iwVv-o5g_MRVeYL45</string>
+	<key>BackendServiceBaseURL</key>
+	<string>https://course-planner-backend-production.up.railway.app</string>
 	<key>SupabaseURL</key>
 	<string>https://qpdvtsbqdpitreslazoe.supabase.co</string>
 	<key>UILaunchStoryboardName</key>
