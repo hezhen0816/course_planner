@@ -8,18 +8,35 @@ struct AppShellView: View {
         Group {
             if !store.isAuthenticated {
                 AuthGateView()
+            } else if store.requiresBiometricUnlock {
+                BiometricLockView()
             } else {
                 authenticatedShell
             }
         }
         .environmentObject(store)
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active, store.isAuthenticated else {
+            guard store.isAuthenticated else {
                 return
             }
 
-            Task {
-                await store.refreshAppContent(suppressErrors: true)
+            switch newPhase {
+            case .active:
+                guard !store.requiresBiometricUnlock else {
+                    return
+                }
+
+                Task {
+                    await store.refreshAppContent(suppressErrors: true)
+                }
+            case .inactive, .background:
+                guard !store.isBiometricAuthenticating else {
+                    return
+                }
+
+                store.lockForBiometricUnlockIfNeeded()
+            @unknown default:
+                break
             }
         }
     }
@@ -79,6 +96,111 @@ struct AppShellView: View {
             .tag(AppTab.settings)
         }
         .tint(.indigo)
+    }
+}
+
+private struct BiometricLockView: View {
+    @EnvironmentObject private var store: AppSessionStore
+    @State private var didAttemptAutomaticUnlock = false
+
+    var body: some View {
+        ZStack {
+            authBackground
+
+            VStack(spacing: 28) {
+                Spacer()
+
+                VStack(spacing: 16) {
+                    Image(systemName: "faceid")
+                        .font(.system(size: 52, weight: .medium))
+                        .foregroundStyle(.indigo)
+                        .frame(width: 88, height: 88)
+                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.indigo.opacity(0.16), lineWidth: 1)
+                        )
+
+                    VStack(spacing: 8) {
+                        Text("使用 \(store.localizedBiometricName) 解鎖")
+                            .font(.title2.weight(.bold))
+                        Text(store.currentUserEmail ?? "修課羅盤")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                if let biometricAuthErrorMessage = store.biometricAuthErrorMessage {
+                    Label(biometricAuthErrorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+
+                Button {
+                    Task {
+                        await store.unlockWithBiometrics()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Spacer()
+                        if store.isBiometricAuthenticating {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "faceid")
+                        }
+                        Text(store.isBiometricAuthenticating ? "驗證中..." : "解鎖")
+                            .font(.headline.weight(.semibold))
+                        Spacer()
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 15)
+                    .background(Color.indigo, in: Capsule())
+                }
+                .disabled(store.isBiometricAuthenticating)
+                .opacity(store.isBiometricAuthenticating ? 0.7 : 1)
+
+                Button(role: .destructive) {
+                    Task {
+                        await store.signOut()
+                    }
+                } label: {
+                    Label("改用 Email 登入", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                Spacer()
+            }
+            .padding(24)
+            .frame(maxWidth: 420)
+        }
+        .task {
+            guard !didAttemptAutomaticUnlock else {
+                return
+            }
+
+            didAttemptAutomaticUnlock = true
+            await store.unlockWithBiometrics()
+        }
+    }
+
+    private var authBackground: some View {
+        ZStack {
+            Color(.systemGroupedBackground)
+            LinearGradient(
+                colors: [Color.indigo.opacity(0.08), Color.blue.opacity(0.04), Color(.systemGroupedBackground)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
     }
 }
 

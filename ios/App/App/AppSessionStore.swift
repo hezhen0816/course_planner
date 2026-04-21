@@ -65,6 +65,10 @@ final class AppSessionStore: ObservableObject {
     @Published var isAuthenticating = false
     @Published var authErrorMessage: String?
     @Published var authNoticeMessage: String?
+    @Published var isBiometricAuthEnabled = false
+    @Published var requiresBiometricUnlock = false
+    @Published var isBiometricAuthenticating = false
+    @Published var biometricAuthErrorMessage: String?
     @Published var historyImportErrorMessage: String?
     @Published var historyImportNoticeMessage: String?
     @Published var reminderErrorMessage: String?
@@ -85,12 +89,13 @@ final class AppSessionStore: ObservableObject {
         self.studentName = ""
         self.subtitle = "尚未同步課表"
         self.lastSyncedAt = nil
+        self.isBiometricAuthEnabled = UserDefaults.standard.bool(forKey: Self.biometricAuthEnabledStorageKey)
         restoreCachedAuthSession()
 
         if !isAuthConfigured, authSession != nil {
             clearAuthenticatedState()
             authErrorMessage = "尚未完成雲端登入設定"
-        } else if let storedSession = authSession {
+        } else if let storedSession = authSession, !requiresBiometricUnlock {
             bootstrapAuthenticatedData(forceRefresh: storedSession.expiresAt <= Date().addingTimeInterval(60))
         }
     }
@@ -101,6 +106,10 @@ final class AppSessionStore: ObservableObject {
 
     var isAuthConfigured: Bool {
         supabaseURL != nil && supabaseAnonKey != nil
+    }
+
+    var shouldUseBiometricUnlock: Bool {
+        isAuthenticated && isBiometricAuthEnabled
     }
 
     var nextUpcomingCourse: UpcomingCourse? {
@@ -183,6 +192,7 @@ final class AppSessionStore: ObservableObject {
 
 
     static let authSessionStorageKey = "courseplanner.supabase.session"
+    static let biometricAuthEnabledStorageKey = "courseplanner.biometricAuth.enabled"
     static let scheduleSnapshotStorageKeyPrefix = "courseplanner.scheduleSnapshot."
     static let moodleAssignmentsStorageKeyPrefix = "courseplanner.moodleAssignments."
 

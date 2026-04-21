@@ -43,6 +43,45 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("安全性") {
+                    Toggle(isOn: biometricToggleBinding) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "faceid")
+                                .font(.headline)
+                                .foregroundStyle(.indigo)
+                                .frame(width: 36, height: 36)
+                                .background(Color.indigo.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(store.localizedBiometricName) 登入")
+                                    .font(.body.weight(.semibold))
+                                Text("重新開啟 App 或回到前景時先完成本機解鎖")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .disabled(store.isBiometricAuthenticating)
+
+                    if store.isBiometricAuthEnabled {
+                        Button {
+                            store.lockForBiometricUnlockIfNeeded()
+                        } label: {
+                            Label("立即鎖定 App", systemImage: "lock.fill")
+                        }
+                    }
+
+                    if let biometricAuthErrorMessage = store.biometricAuthErrorMessage {
+                        Text(biometricAuthErrorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("此功能只保護這支裝置上的 App 解鎖；登出後會清除本機 Face ID 設定。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("校務系統") {
                     TextField("學號 / 校務帳號", text: $store.schoolAccount)
                         .textInputAutocapitalization(.never)
@@ -242,6 +281,19 @@ struct SettingsView: View {
                 .foregroundStyle(.tertiary)
         }
         .contentShape(Rectangle())
+    }
+
+    private var biometricToggleBinding: Binding<Bool> {
+        Binding(
+            get: {
+                store.isBiometricAuthEnabled
+            },
+            set: { isEnabled in
+                Task {
+                    await store.setBiometricAuthEnabled(isEnabled)
+                }
+            }
+        )
     }
 
     private var syncStatusDescription: String {

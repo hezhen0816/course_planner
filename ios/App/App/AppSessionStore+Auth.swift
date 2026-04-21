@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 
 extension AppSessionStore {
     func signIn(email: String, password: String) async {
@@ -109,6 +110,9 @@ extension AppSessionStore {
 
         authSession = storedSession
         currentUserEmail = storedSession.email
+        if isBiometricAuthEnabled {
+            requiresBiometricUnlock = true
+        }
         restoreCachedScheduleSnapshot(for: storedSession)
         restoreCachedMoodleAssignmentsSnapshot(for: storedSession)
     }
@@ -143,6 +147,8 @@ extension AppSessionStore {
 
         authSession = storedSession
         currentUserEmail = storedSession.email
+        requiresBiometricUnlock = false
+        biometricAuthErrorMessage = nil
         authErrorMessage = nil
         subtitle = "尚未同步課表"
         persistAuthSession(storedSession)
@@ -238,6 +244,10 @@ extension AppSessionStore {
         plannerSaveTask = nil
         authSession = nil
         currentUserEmail = nil
+        isBiometricAuthEnabled = false
+        requiresBiometricUnlock = false
+        isBiometricAuthenticating = false
+        biometricAuthErrorMessage = nil
         authErrorMessage = nil
         authNoticeMessage = nil
         historyImportErrorMessage = nil
@@ -252,5 +262,134 @@ extension AppSessionStore {
         resetCloudBackedState()
         selectedTab = .home
         UserDefaults.standard.removeObject(forKey: Self.authSessionStorageKey)
+        UserDefaults.standard.removeObject(forKey: Self.biometricAuthEnabledStorageKey)
+    }
+
+    var localizedBiometricName: String {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            return "Face ID"
+        }
+
+        switch context.biometryType {
+        case .faceID:
+            return "Face ID"
+        case .touchID:
+            return "Touch ID"
+        case .opticID:
+            return "Optic ID"
+        default:
+            return "Face ID"
+        }
+    }
+
+    func setBiometricAuthEnabled(_ isEnabled: Bool) async {
+        biometricAuthErrorMessage = nil
+
+        guard isEnabled else {
+            isBiometricAuthEnabled = false
+            requiresBiometricUnlock = false
+            UserDefaults.standard.set(false, forKey: Self.biometricAuthEnabledStorageKey)
+            return
+        }
+
+        guard isAuthenticated else {
+            biometricAuthErrorMessage = "請先登入帳號，再啟用 \(localizedBiometricName)"
+            return
+        }
+
+        guard biometricAuthenticationIsAvailable() else {
+            biometricAuthErrorMessage = "這台裝置尚未設定可用的 \(localizedBiometricName)"
+            return
+        }
+
+        let didAuthenticate = await evaluateBiometricAuthentication(
+            reason: "啟用後，開啟修課羅盤時可使用 \(localizedBiometricName) 解鎖。"
+        )
+        guard didAuthenticate else {
+            return
+        }
+
+        isBiometricAuthEnabled = true
+        requiresBiometricUnlock = false
+        UserDefaults.standard.set(true, forKey: Self.biometricAuthEnabledStorageKey)
+        authNoticeMessage = "已啟用 \(localizedBiometricName) 登入"
+    }
+
+    func lockForBiometricUnlockIfNeeded() {
+        guard shouldUseBiometricUnlock else {
+            return
+        }
+        requiresBiometricUnlock = true
+        biometricAuthErrorMessage = nil
+    }
+
+    func unlockWithBiometrics() async {
+        guard shouldUseBiometricUnlock else {
+            requiresBiometricUnlock = false
+            return
+        }
+
+        biometricAuthErrorMessage = nil
+        let didAuthenticate = await evaluateBiometricAuthentication(
+            reason: "使用 \(localizedBiometricName) 解鎖修課羅盤。"
+        )
+
+        if didAuthenticate {
+            requiresBiometricUnlock = false
+            biometricAuthErrorMessage = nil
+            bootstrapAuthenticatedData(forceRefresh: false)
+        }
+    }
+
+    private func biometricAuthenticationIsAvailable() -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+    }
+
+    private func evaluateBiometricAuthentication(reason: String) async -> Bool {
+        let context = LAContext()
+        context.localizedCancelTitle = "取消"
+
+        var policyError: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &policyError) else {
+            biometricAuthErrorMessage = "這台裝置尚未設定可用的 \(localizedBiometricName)"
+            return false
+        }
+
+        isBiometricAuthenticating = true
+        defer {
+            isBiometricAuthenticating = false
+        }
+
+        do {
+            return try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+        } catch {
+            biometricAuthErrorMessage = biometricErrorMessage(from: error)
+            return false
+        }
+    }
+
+    private func biometricErrorMessage(from error: Error) -> String {
+        guard let laError = error as? LAError else {
+            return error.localizedDescription
+        }
+
+        switch laError.code {
+        case .authenticationFailed:
+            return "\(localizedBiometricName) 驗證失敗，請再試一次"
+        case .biometryLockout:
+            return "\(localizedBiometricName) 已暫時鎖定，請先用系統密碼解鎖後再試"
+        case .biometryNotAvailable:
+            return "這台裝置不支援 \(localizedBiometricName)"
+        case .biometryNotEnrolled:
+            return "請先到系統設定完成 \(localizedBiometricName) 設定"
+        case .userCancel, .systemCancel, .appCancel:
+            return "已取消 \(localizedBiometricName) 驗證"
+        default:
+            return laError.localizedDescription
+        }
     }
 }
