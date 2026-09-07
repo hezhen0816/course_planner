@@ -166,6 +166,9 @@ export default function CoursePlannerWebApp() {
     markHistoryMigrated: () => {
       hasMigratedHistoryCoursesRef.current = true;
     },
+    onOfficialScheduleRowsSynced: (rows) => {
+      setOfficialSelection((current) => (current ? { ...current, schedule_rows: rows } : current));
+    },
   });
   const [schoolSyncModalMode, setSchoolSyncModalMode] = useState<'school-data' | 'official-selection'>('school-data');
   const [officialSelection, setOfficialSelection] = useState<OfficialSelectionSyncResponse | null>(null);
@@ -555,18 +558,6 @@ export default function CoursePlannerWebApp() {
     openSchoolSyncModal();
   };
 
-  const requestOfficialSelectionSync = () => {
-    if (schoolUsername.trim() && (schoolPassword.trim() || hasSavedSchoolCredentials)) {
-      void syncOfficialSelectionData();
-      return;
-    }
-    openOfficialSelectionSync(
-      hasSavedSchoolCredentials
-        ? '已保存校務帳密，但目前尚未載入密碼，請稍候再試或重新登入 App。'
-        : '尚未保存校務密碼，請輸入校務帳密後同步一次。',
-    );
-  };
-
   const submitOfficialSelectionCourse = async (
     action: 'waitlist' | 'join' | 'remove',
     courseNo: string,
@@ -761,7 +752,7 @@ export default function CoursePlannerWebApp() {
   };
 
   if (authLoading || (session && dataLoading)) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">載入中...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50">載入中...</div>;
   }
 
   if (!session && !isDemoMode) {
@@ -855,12 +846,14 @@ export default function CoursePlannerWebApp() {
             hasSavedSchoolCredentials={hasSavedSchoolCredentials}
             syncStatus={schoolSyncStatus}
             syncMessage={schoolSyncMessage}
+            schoolSync={data.schoolSync}
+            officialSelection={officialSelection}
             officialSelectionStatus={officialSelectionStatus}
             officialSelectionMessage={officialSelectionMessage}
             initialGpaApiSettings={data.settings?.gpaApi}
             initialProgramDepartmentSettings={data.settings?.programDepartments}
             onOpenSchoolSync={openSchoolDataSync}
-            onOpenOfficialSelectionSync={requestOfficialSelectionSync}
+            onOpenOfficialSelectionSync={() => openOfficialSelectionSync()}
             onClearSavedSchoolCredentials={() => void clearSavedSchoolCredentials()}
             onSaveTargets={(targets) => {
               setData((prev) => ({ ...prev, targets }));
@@ -911,6 +904,7 @@ export default function CoursePlannerWebApp() {
         importPreview={importPreview}
         isSchoolSyncOpen={isSchoolSyncOpen}
         schoolSyncMode={schoolSyncModalMode}
+        onSchoolSyncModeChange={setSchoolSyncModalMode}
         schoolUsername={schoolUsername}
         schoolPassword={schoolPassword}
         rememberSchoolCredentials={rememberSchoolCredentials}

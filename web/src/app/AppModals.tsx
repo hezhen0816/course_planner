@@ -18,6 +18,7 @@ type AppModalsProps = {
   importPreview: ApiImportPreview | null;
   isSchoolSyncOpen: boolean;
   schoolSyncMode: 'school-data' | 'official-selection';
+  onSchoolSyncModeChange: (mode: 'school-data' | 'official-selection') => void;
   schoolUsername: string;
   schoolPassword: string;
   rememberSchoolCredentials: boolean;
@@ -51,6 +52,7 @@ export function AppModals({
   importPreview,
   isSchoolSyncOpen,
   schoolSyncMode,
+  onSchoolSyncModeChange,
   schoolUsername,
   schoolPassword,
   rememberSchoolCredentials,
@@ -95,6 +97,7 @@ export function AppModals({
       {isSchoolSyncOpen && (
         <SchoolScheduleSyncModal
           mode={schoolSyncMode}
+          onModeChange={onSchoolSyncModeChange}
           username={schoolUsername}
           password={schoolPassword}
           rememberCredentials={rememberSchoolCredentials}

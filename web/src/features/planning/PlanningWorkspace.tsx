@@ -45,7 +45,7 @@ function ScheduleLegend() {
     <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
       {items.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          <span className={`h-2.5 w-2.5 rounded-sm border ${item.className}`} />
+          <span className={`h-2.5 w-2.5 rounded border ${item.className}`} />
           {item.label}
         </span>
       ))}
@@ -340,7 +340,9 @@ export function PlanningWorkspace({
   const officialScheduleHasData = officialSelection ? hasOfficialScheduleWeekdayData(officialSelection.schedule_rows) : false;
   const showSelectionListWithoutSchedule = Boolean(officialSelection && officialSelectionListCount > 0 && !officialScheduleHasData);
   const totalPlanningItems = officialRegisteredCount + officialAvailableCount + virtualCourses.length;
-  const syncedAtLabel = officialSelection ? formatSyncTime(officialSelection.synced_at) : '尚未同步';
+  const syncedAtLabel = data.schoolSync?.scheduleSyncedAt
+    ? `課表 ${new Date(data.schoolSync.scheduleSyncedAt).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}`
+    : officialSelection ? formatSyncTime(officialSelection.synced_at) : '尚未同步';
   const [showWeekend, setShowWeekend] = useState(false);
   const modeOptions: Array<{ value: PlanningMode; label: string }> = [
     { value: 'lottery', label: '初選志願' },
@@ -1311,6 +1313,14 @@ function getOfficialScheduleCell(row: Record<string, string>, label: string): st
     Boolean(value) && compactAliases.some((alias) => compactOfficialKey(key) === alias)
   ));
   if (matched?.[1]) return matched[1];
+
+  // Positional fallback is only safe for header-less rows. JSONB storage
+  // reorders keys, so Object.values() no longer follows column order and an
+  // empty 星期二 would otherwise render 星期三's course.
+  const hasNamedColumns = Object.keys(row).some((key) => (
+    OFFICIAL_SCHEDULE_COLUMNS.includes(compactOfficialKey(key))
+  ));
+  if (hasNamedColumns) return '';
 
   const columnIndex = OFFICIAL_SCHEDULE_COLUMNS.indexOf(label);
   if (columnIndex < 0) return '';

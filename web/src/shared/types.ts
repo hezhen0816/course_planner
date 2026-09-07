@@ -81,6 +81,13 @@ export interface SelectionPlan {
   updatedAt?: string;
 }
 
+export interface SchoolSyncStatus {
+  scheduleSyncedAt?: string;
+  scheduleCourseCount?: number;
+  historyImportedAt?: string;
+  historyRecordCount?: number;
+}
+
 export interface SchoolCredentials {
   username: string;
   hasPassword: boolean;
@@ -166,6 +173,8 @@ export interface AppData {
   targets: AppTargets;
   settings?: AppSettings;
   selectionPlan?: SelectionPlan;
+  /** When school data was last pulled through the backend; shown as sync status. */
+  schoolSync?: SchoolSyncStatus;
   requirementSets: RequirementSet[];
   pendingRequirements: PendingRequirement[];
   historyRecords: AcademicHistoryRecord[];

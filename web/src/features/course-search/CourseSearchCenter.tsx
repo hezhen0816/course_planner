@@ -132,7 +132,7 @@ export function CourseSearchCenter({
       <section className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">課程查詢中心</h2>
+            <h2 className="text-2xl font-semibold text-slate-950">官方開課查詢</h2>
             <p className="mt-1 text-sm text-slate-500">查詢官方開課資料，加入官方選課清單；若官方拒絕，會以待加簽標示在課表上。</p>
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -616,7 +616,7 @@ function CourseResultRow({
           {capacityLabel(offering)}
         </span>
       </td>
-      <td className="max-w-[240px] whitespace-normal break-words border-b border-slate-100 px-3 py-3 text-slate-500" title={offering.contents || undefined}>
+      <td className="min-w-[240px] max-w-xl whitespace-normal break-words border-b border-slate-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
         {offering.contents || (conflicts.length > 0 ? `與 ${conflicts.map((course) => course.name).join('、')} 衝堂` : '無備註')}
       </td>
       <td className="border-b border-slate-100 px-3 py-3">

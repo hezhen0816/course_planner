@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { KeyRound, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
-import type { AppData, GpaApiSettings, ProgramDepartmentSettings } from '../../shared/types';
+import type {
+  AppData,
+  GpaApiSettings,
+  OfficialSelectionSyncResponse,
+  ProgramDepartmentSettings,
+  SchoolSyncStatus,
+} from '../../shared/types';
 import { listCourseDepartments } from '../../shared/domain/courseDepartments';
 
 const EMPTY_GPA_API_SETTINGS: GpaApiSettings = {
@@ -10,14 +16,18 @@ const EMPTY_GPA_API_SETTINGS: GpaApiSettings = {
 const EMPTY_PROGRAM_DEPARTMENT_SETTINGS: ProgramDepartmentSettings = {};
 const COURSE_DEPARTMENTS = listCourseDepartments();
 
+type SyncActivity = 'idle' | 'loading' | 'error' | 'success';
+
 type SettingsPageProps = {
   initialSettings: AppData['targets'];
   schoolUsername: string;
   selectionTargetLabel: string;
   hasSavedSchoolCredentials: boolean;
-  syncStatus: 'idle' | 'loading' | 'error' | 'success';
+  syncStatus: SyncActivity;
   syncMessage: string;
-  officialSelectionStatus: 'idle' | 'loading' | 'error' | 'success';
+  schoolSync?: SchoolSyncStatus;
+  officialSelection: OfficialSelectionSyncResponse | null;
+  officialSelectionStatus: SyncActivity;
   officialSelectionMessage: string;
   initialGpaApiSettings?: GpaApiSettings;
   initialProgramDepartmentSettings?: ProgramDepartmentSettings;
@@ -36,6 +46,8 @@ export function SettingsPage({
   hasSavedSchoolCredentials,
   syncStatus,
   syncMessage,
+  schoolSync,
+  officialSelection,
   officialSelectionStatus,
   officialSelectionMessage,
   initialGpaApiSettings,
@@ -57,6 +69,10 @@ export function SettingsPage({
     ...initialProgramDepartmentSettings,
   });
   const [programDepartmentSaved, setProgramDepartmentSaved] = useState(false);
+  const isTargetsDirty = JSON.stringify(settingsForm) !== JSON.stringify(initialSettings);
+  const updateTarget = (key: keyof AppData['targets']) => (value: number) => {
+    setSettingsForm((current) => ({ ...current, [key]: value }));
+  };
 
   useEffect(() => {
     setSettingsForm(initialSettings);
@@ -91,38 +107,34 @@ export function SettingsPage({
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">資料同步與畢業門檻</h1>
             <p className="mt-1 text-sm text-slate-500">校務資料同步、畢業門檻數字與帳號層級設定集中放在這裡，不混進選課流程。</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              onClick={onOpenSchoolSync}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              <RefreshCw className="h-4 w-4" />
-              同步校務資料
-            </button>
-            <button
-              onClick={onOpenOfficialSelectionSync}
-              disabled={officialSelectionStatus === 'loading'}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${officialSelectionStatus === 'loading' ? 'animate-spin' : ''}`} />
-              同步官方選課狀態
-            </button>
-          </div>
+          <button
+            onClick={onOpenSchoolSync}
+            disabled={syncStatus === 'loading' || officialSelectionStatus === 'loading'}
+            className="inline-flex items-center justify-center gap-2 self-start rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncStatus === 'loading' || officialSelectionStatus === 'loading' ? 'animate-spin' : ''}`} />
+            同步校務資料
+          </button>
         </div>
-        {syncMessage && (
-          <p className={`mt-4 rounded-md px-3 py-2 text-sm ${
-            syncStatus === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
-          }`}>
-            {syncMessage}
-          </p>
-        )}
-        {officialSelectionMessage && (
-          <p className={`mt-3 rounded-md px-3 py-2 text-sm ${
-            officialSelectionStatus === 'error' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'
-          }`}>
-            官方選課狀態：{officialSelectionMessage}
-          </p>
-        )}
+
+        {/* Per-source status rows with timestamps replace the free-text banners,
+            so "did this actually sync, and when?" is answered at a glance. */}
+        <div className="mt-4 divide-y divide-slate-100 rounded-md border border-slate-200">
+          <SyncStatusRow
+            title="課表與成績"
+            activity={syncStatus}
+            message={syncMessage}
+            summary={scheduleSummary(schoolSync)}
+            onSync={onOpenSchoolSync}
+          />
+          <SyncStatusRow
+            title="官方選課狀態"
+            activity={officialSelectionStatus}
+            message={officialSelectionMessage}
+            summary={officialSelectionSummary(officialSelection)}
+            onSync={onOpenOfficialSelectionSync}
+          />
+        </div>
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -298,89 +310,136 @@ export function SettingsPage({
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
-          <Settings className="h-4 w-4 text-blue-600" />
-          <h2 className="text-base font-semibold text-slate-900">設定畢業門檻</h2>
-        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             onSaveTargets(settingsForm);
           }}
-          className="space-y-5 p-5"
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <NumberField
-              label="畢業總學分"
-              value={settingsForm.total}
-              onChange={(value) => setSettingsForm({ ...settingsForm, total: value })}
-              wide
-            />
-            <NumberField
-              label="必修國文"
-              value={settingsForm.chinese}
-              onChange={(value) => setSettingsForm({ ...settingsForm, chinese: value })}
-            />
-            <NumberField
-              label="共同必修英文"
-              value={settingsForm.english}
-              onChange={(value) => setSettingsForm({ ...settingsForm, english: value })}
-            />
-            <NumberField
-              label="通識學分"
-              value={settingsForm.gen_ed}
-              onChange={(value) => setSettingsForm({ ...settingsForm, gen_ed: value })}
-            />
-            <NumberField
-              label="社會實踐"
-              value={settingsForm.social}
-              onChange={(value) => setSettingsForm({ ...settingsForm, social: value })}
-            />
-            <NumberField
-              label="體育（學期數）"
-              value={settingsForm.pe_semesters}
-              onChange={(value) => setSettingsForm({ ...settingsForm, pe_semesters: value })}
-              wide
-            />
-          </div>
-
-          <div className="border-t border-slate-100 pt-5">
-            <h3 className="mb-3 text-sm font-semibold text-slate-700">系所課程門檻</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <NumberField
-                label="本系必修"
-                value={settingsForm.home_compulsory}
-                onChange={(value) => setSettingsForm({ ...settingsForm, home_compulsory: value })}
-              />
-              <NumberField
-                label="本系選修"
-                value={settingsForm.home_elective}
-                onChange={(value) => setSettingsForm({ ...settingsForm, home_elective: value })}
-              />
-              <NumberField
-                label="雙主修"
-                value={settingsForm.double_major}
-                onChange={(value) => setSettingsForm({ ...settingsForm, double_major: value })}
-              />
-              <NumberField
-                label="輔修"
-                value={settingsForm.minor}
-                onChange={(value) => setSettingsForm({ ...settingsForm, minor: value })}
-              />
+          <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-blue-600" />
+              <h2 className="text-lg font-semibold text-slate-900">設定畢業門檻</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                aria-live="polite"
+                className={`text-xs ${isTargetsDirty ? 'font-medium text-amber-700' : 'text-slate-400'}`}
+              >
+                {isTargetsDirty ? '有未儲存的變更' : '已儲存'}
+              </span>
+              <button
+                type="submit"
+                disabled={!isTargetsDirty}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                儲存設定
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-end border-t border-slate-100 pt-5">
-            <button
-              type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              儲存設定
-            </button>
+          <div className="grid grid-cols-1 divide-y divide-slate-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+            <ThresholdGroup title="共同畢業門檻" hint="全校共同規定的學分與學期數">
+              <NumberField label="畢業總學分" unit="學分" value={settingsForm.total} onChange={updateTarget('total')} emphasis />
+              <NumberField label="必修國文" unit="學分" value={settingsForm.chinese} onChange={updateTarget('chinese')} />
+              <NumberField label="共同必修英文" unit="學分" value={settingsForm.english} onChange={updateTarget('english')} />
+              <NumberField label="通識學分" unit="學分" value={settingsForm.gen_ed} onChange={updateTarget('gen_ed')} />
+              <NumberField label="社會實踐" unit="學分" value={settingsForm.social} onChange={updateTarget('social')} />
+              <NumberField label="體育" unit="學期" value={settingsForm.pe_semesters} onChange={updateTarget('pe_semesters')} />
+            </ThresholdGroup>
+            <ThresholdGroup title="系所課程門檻" hint="依系所規定填寫，0 表示不適用">
+              <NumberField label="本系必修" unit="學分" value={settingsForm.home_compulsory} onChange={updateTarget('home_compulsory')} emphasis />
+              <NumberField label="本系選修" unit="學分" value={settingsForm.home_elective} onChange={updateTarget('home_elective')} />
+              <NumberField label="雙主修" unit="學分" value={settingsForm.double_major} onChange={updateTarget('double_major')} />
+              <NumberField label="輔修" unit="學分" value={settingsForm.minor} onChange={updateTarget('minor')} />
+            </ThresholdGroup>
           </div>
         </form>
       </section>
     </div>
+  );
+}
+
+type SyncSummary = { state: 'never' | 'fresh' | 'stale'; label: string; detail?: string };
+
+function formatSyncStamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function scheduleSummary(schoolSync?: SchoolSyncStatus): SyncSummary {
+  if (!schoolSync?.scheduleSyncedAt) return { state: 'never', label: '尚未同步' };
+  const parts = [`${schoolSync.scheduleCourseCount ?? 0} 門課`];
+  if (schoolSync.historyImportedAt) parts.push(`歷年紀錄 ${schoolSync.historyRecordCount ?? 0} 筆`);
+  return { state: 'fresh', label: `上次同步 ${formatSyncStamp(schoolSync.scheduleSyncedAt)}`, detail: parts.join(' · ') };
+}
+
+function officialSelectionSummary(selection: OfficialSelectionSyncResponse | null): SyncSummary {
+  if (!selection) return { state: 'never', label: '尚未同步' };
+  const detail = `已登記 ${selection.registered_count} 門 · 待加入 ${selection.available_count} 門`;
+  return selection.session_valid
+    ? { state: 'fresh', label: `上次同步 ${formatSyncStamp(selection.synced_at)} · session 有效`, detail }
+    : { state: 'stale', label: `快取 ${formatSyncStamp(selection.synced_at)} · session 已過期`, detail };
+}
+
+function SyncStatusRow({
+  title,
+  activity,
+  message,
+  summary,
+  onSync,
+}: {
+  title: string;
+  activity: SyncActivity;
+  message: string;
+  summary: SyncSummary;
+  onSync: () => void;
+}) {
+  const dotClass = activity === 'loading'
+    ? 'bg-blue-500 animate-pulse'
+    : activity === 'error'
+      ? 'bg-red-500'
+      : summary.state === 'fresh'
+        ? 'bg-emerald-500'
+        : summary.state === 'stale'
+          ? 'bg-amber-500'
+          : 'bg-slate-300';
+  return (
+    <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
+          <span className="text-sm font-semibold text-slate-900">{title}</span>
+          <span className={`text-xs ${summary.state === 'stale' ? 'text-amber-700' : 'text-slate-500'}`}>{summary.label}</span>
+        </div>
+        {summary.detail && <p className="mt-0.5 pl-4 text-xs text-slate-500">{summary.detail}</p>}
+        {message && (
+          <p className={`mt-1 pl-4 text-xs ${activity === 'error' ? 'text-red-700' : 'text-slate-600'}`}>{message}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onSync}
+        disabled={activity === 'loading'}
+        className="shrink-0 self-start text-sm font-medium text-blue-700 hover:underline disabled:cursor-not-allowed disabled:text-slate-400"
+      >
+        {activity === 'loading' ? '同步中…' : '同步'}
+      </button>
+    </div>
+  );
+}
+
+function ThresholdGroup({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return (
+    <fieldset className="min-w-0 px-5 py-4">
+      <legend className="float-left mb-3 w-full">
+        <span className="block text-sm font-semibold text-slate-800">{title}</span>
+        <span className="mt-0.5 block text-xs text-slate-500">{hint}</span>
+      </legend>
+      {/* Cap row width so the value sits near its label instead of drifting to the far edge on wide screens. */}
+      <div className="clear-both max-w-md divide-y divide-slate-100">{children}</div>
+    </fieldset>
   );
 }
 
@@ -450,27 +509,38 @@ function DepartmentField({
   );
 }
 
+// A compact "label · value unit" row: the number is the subject, so the input
+// is only as wide as a 3-digit figure instead of stretching across the card.
 function NumberField({
   label,
+  unit,
   value,
   onChange,
-  wide = false,
+  emphasis = false,
 }: {
   label: string;
+  unit: string;
   value: number;
   onChange: (value: number) => void;
-  wide?: boolean;
+  emphasis?: boolean;
 }) {
   return (
-    <label className={wide ? 'md:col-span-2' : undefined}>
-      <span className="block text-sm font-medium text-slate-700">{label}</span>
-      <input
-        type="number"
-        min="0"
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-      />
+    <label className="flex items-center justify-between gap-4 py-2">
+      <span className={`text-sm ${emphasis ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>{label}</span>
+      <span className="flex items-baseline gap-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          min="0"
+          step="1"
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className={`w-20 rounded-md border border-slate-300 px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
+            emphasis ? 'font-semibold text-slate-900' : 'text-slate-800'
+          }`}
+        />
+        <span className="w-8 text-xs text-slate-500">{unit}</span>
+      </span>
     </label>
   );
 }

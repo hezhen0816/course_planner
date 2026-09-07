@@ -8,10 +8,28 @@ import type {
   SchoolCredentials,
 } from './types';
 
-const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
+// Only fall back to a local backend while developing; a deployed site with no
+// VITE_BACKEND_URL has no backend at all and should say so instead of probing
+// localhost from the viewer's machine.
+const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, '');
+
+export const BACKEND_UNAVAILABLE_MESSAGE =
+  '此站台未連接校務同步後端，無法同步課表或官方選課。請改用手機 App，或在 tailnet 內以本機執行 Web（VITE_BACKEND_URL）。';
+
+export function isBackendConfigured(): boolean {
+  return API_BASE_URL.length > 0;
+}
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  if (!isBackendConfigured()) {
+    throw new Error(BACKEND_UNAVAILABLE_MESSAGE);
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, init);
+  } catch {
+    throw new Error(`無法連線到校務同步後端（${API_BASE_URL}）。請確認後端已啟動，且此裝置在同一個 tailnet 內。`);
+  }
   if (!response.ok) {
     let message = `API 請求失敗 (${response.status})`;
     try {

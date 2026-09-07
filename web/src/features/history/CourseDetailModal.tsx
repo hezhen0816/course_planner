@@ -56,8 +56,8 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
       case 'chinese': return 'bg-orange-50 border-orange-100';
       case 'english': return 'bg-indigo-50 border-indigo-100';
       case 'social': return 'bg-yellow-50 border-yellow-100';
-      case 'unclassified': return 'bg-gray-50 border-gray-200';
-      default: return 'bg-gray-50 border-gray-100';
+      case 'unclassified': return 'bg-slate-50 border-slate-200';
+      default: return 'bg-slate-50 border-slate-100';
     }
   };
 
@@ -186,7 +186,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* 標題區塊 */}
         <div className={`px-6 py-5 border-b flex justify-between items-start ${getCategoryColor(course.category)}`}>
@@ -197,7 +197,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
               </span>
               <span>{course.credits} 學分</span>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900">{course.name}</h2>
+            <h2 className="text-3xl font-semibold text-slate-900">{course.name}</h2>
           </div>
           <div className="flex space-x-2">
              <button onClick={onClose} className="p-2 rounded-full bg-white/50 hover:bg-white text-slate-700 transition-colors">
@@ -277,8 +277,8 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-            <h3 className="font-bold text-slate-800 mb-2">認列歸屬</h3>
+          <section className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+            <h3 className="font-semibold text-slate-800 mb-2">認列歸屬</h3>
             <p className="mb-3 text-sm text-slate-500">
               可把這門課指定到雙主修或輔系規則；選「不指定」只會取消認列，不會移除課程。
             </p>
@@ -297,7 +297,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
           </section>
   
           {/* 2. 成績試算 & 預測區塊 (Calculator Section) */}
-          <section className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <section className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-6 border border-slate-200 shadow-sm">
             {(() => {
                 const { currentScore, totalWeight } = calculateTotalScore(detailData.gradingPolicy);
                 const gradeInfo = getGradeFromScore(currentScore);
@@ -306,7 +306,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
                   <>
                     <div className="flex justify-between items-start mb-6">
                         <div>
-                            <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                            <h3 className="text-lg font-semibold text-slate-800 flex items-center">
                                 <Calculator className="h-5 w-5 mr-2 text-blue-600" />
                                 成績試算 & 預測
                             </h3>
@@ -330,7 +330,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
                        {detailData.gradingPolicy.map((item, index) => {
                            const itemWeightedScore = (item.weight * (item.score || 0)) / 100;
                            return (
-                            <div key={item.id} className="relative bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                            <div key={item.id} className="relative bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_230px_90px_40px] gap-3 md:items-center">
                                 <input 
                                   type="text" 
@@ -433,7 +433,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
                        
                        <button 
                          onClick={addGradingItem}
-                         className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-medium hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                         className="w-full py-3 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 font-medium hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
                        >
                          <Plus className="h-4 w-4" /> 新增評分項目
                        </button>
@@ -445,14 +445,14 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
   
           {/* 3. 生存筆記區塊 (Survival Notes) */}
           <section>
-             <h3 className="font-bold text-slate-800 flex items-center mb-3">
+             <h3 className="font-semibold text-slate-800 flex items-center mb-3">
                <FileText className="h-5 w-5 mr-2 text-yellow-500" /> 
                生存筆記
              </h3>
              <textarea 
                value={detailData.notes || ''}
                onChange={e => setDetailData(prev => ({...prev, notes: e.target.value}))}
-               className="w-full h-32 px-4 py-3 bg-yellow-50/50 border border-yellow-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-yellow-400 outline-none resize-none text-slate-700 leading-relaxed"
+               className="w-full h-32 px-4 py-3 bg-yellow-50/50 border border-yellow-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-yellow-400 outline-none resize-none text-slate-700 leading-relaxed"
                placeholder="在這裡記錄上課風格、點名頻率、考古題重點..."
              />
           </section>

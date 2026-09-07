@@ -14,6 +14,7 @@ import {
   historyRecordsFromImport,
   lookupHistoricalSchedules,
   mergeHistoryRecordsIntoSemesters,
+  officialScheduleRowsFromSlots,
   retakeRequirementsFromHistory,
   semesterForStudentTerm,
 } from '../../shared/domain/planner';
@@ -25,6 +26,8 @@ type UseSchoolSyncOptions = {
   accessToken?: string;
   setActiveSemesterId: (semesterId: string) => void;
   markHistoryMigrated: () => void;
+  /** Called with fresh official-timetable rows after a schedule sync so the workbench grid stays current. */
+  onOfficialScheduleRowsSynced?: (rows: Record<string, string>[]) => void;
 };
 
 export function useSchoolSync({
@@ -34,6 +37,7 @@ export function useSchoolSync({
   accessToken,
   setActiveSemesterId,
   markHistoryMigrated,
+  onOfficialScheduleRowsSynced,
 }: UseSchoolSyncOptions) {
   const [isSchoolSyncOpen, setIsSchoolSyncOpen] = useState(false);
   const [schoolUsername, setSchoolUsername] = useState('');
@@ -179,6 +183,7 @@ export function useSchoolSync({
       setSchoolSyncMessage('正在同步最新選課清單...');
       const schedulePayload = await syncSchoolSchedule(username, password, token || undefined);
       const courses = coursesFromScheduleSync(schedulePayload);
+      const officialScheduleRows = officialScheduleRowsFromSlots(schedulePayload.slots);
 
       setSchoolSyncMessage('已取得最新課表，正在同步歷年成績與補查歷史節次...');
       const historyPayload = await importAcademicHistory(username, password, token || undefined);
@@ -211,9 +216,31 @@ export function useSchoolSync({
             historyRecords,
             requirementSets: retakeRequirements.length > 0 ? [...otherSets, retakeSet] : otherSets,
             pendingRequirements: [...otherRequirements, ...retakeRequirements],
+            schoolSync: {
+              ...prev.schoolSync,
+              scheduleSyncedAt: schedulePayload.synced_at,
+              scheduleCourseCount: courses.length,
+              historyImportedAt: historyPayload.imported_at,
+              historyRecordCount: historyRecords.length,
+            },
+            // The workbench grid renders officialSelectionCache.schedule_rows, which
+            // otherwise only changes on an official-selection sync and goes stale.
+            ...(prev.selectionPlan?.officialSelectionCache
+              ? {
+                selectionPlan: {
+                  ...prev.selectionPlan,
+                  officialSelectionCache: {
+                    ...prev.selectionPlan.officialSelectionCache,
+                    schedule_rows: officialScheduleRows,
+                  },
+                  updatedAt: new Date().toISOString(),
+                },
+              }
+              : {}),
           };
         })(),
       }));
+      onOfficialScheduleRowsSynced?.(officialScheduleRows);
       setActiveSemesterId(importSemesterId);
       markHistoryMigrated();
       let credentialMessage = '';

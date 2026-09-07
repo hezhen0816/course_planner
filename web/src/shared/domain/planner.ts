@@ -75,8 +75,64 @@ export function parseNodeSlots(node: string): string[] {
     .filter(Boolean);
 }
 
+const DAY_LABEL_BY_CODE: Record<string, string> = Object.fromEntries(DAY_COLUMNS.map((day) => [day.code, day.label]));
+
+/**
+ * Render slots grouped by weekday with the Chinese day annotated once, e.g.
+ * ["M6","M7","M8"] -> "M（一）6, 7, 8" and ["W8","R3","R4"] -> "W（三）8、R（四）3, 4".
+ */
 export function displaySlots(slots: string[]): string {
-  return slots.length > 0 ? slots.join(', ') : '未提供節次';
+  if (slots.length === 0) return '未提供節次';
+  const groups: { day: string; periods: string[] }[] = [];
+  slots.forEach((slot) => {
+    const match = slot.trim().toUpperCase().match(/^([A-Z])(\d{1,2}|[A-D])$/);
+    if (!match || !DAY_LABEL_BY_CODE[match[1]]) {
+      groups.push({ day: '', periods: [slot] });
+      return;
+    }
+    const [, day, period] = match;
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) {
+      last.periods.push(period);
+    } else {
+      groups.push({ day, periods: [period] });
+    }
+  });
+  return groups
+    .map((group) => (group.day ? `${group.day}（${DAY_LABEL_BY_CODE[group.day]}）${group.periods.join(', ')}` : group.periods.join(', ')))
+    .join('、');
+}
+
+const OFFICIAL_SCHEDULE_WEEKDAYS = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+const OFFICIAL_SCHEDULE_PERIOD_TIMES: Record<string, string> = {
+  '1': '08:10～09:00', '2': '9:10～10:00', '3': '10:20～11:10', '4': '11:20～12:10', '5': '12:20～13:10',
+  '6': '13:20～14:10', '7': '14:20～15:10', '8': '15:30～16:20', '9': '16:30～17:20', '10': '17:30～18:20',
+  A: '18:25～19:15', B: '19:20～20:10', C: '20:15～21:05', D: '21:10～22:00',
+};
+
+/**
+ * Build the official-timetable grid rows (節次/時間/星期一…星期日) from a schedule
+ * sync, mirroring the backend's _schedule_rows_from_slots, so a plain schedule
+ * sync refreshes the workbench grid without an official-selection sync.
+ */
+export function officialScheduleRowsFromSlots(slots: ScheduleSyncResponse['slots']): Record<string, string>[] {
+  const rows = PERIODS.map((period) => {
+    const row: Record<string, string> = { 節次: period, 時間: OFFICIAL_SCHEDULE_PERIOD_TIMES[period] || '' };
+    OFFICIAL_SCHEDULE_WEEKDAYS.forEach((weekday) => {
+      row[weekday] = '';
+    });
+    return row;
+  });
+  const rowByPeriod = new Map(rows.map((row) => [row.節次, row]));
+  slots.forEach((slot) => {
+    const period = slot.period.trim().toUpperCase();
+    const weekday = slot.weekday_label.trim();
+    const courseName = slot.course_name.trim();
+    const row = rowByPeriod.get(period);
+    if (!row || !OFFICIAL_SCHEDULE_WEEKDAYS.includes(weekday) || !courseName) return;
+    row[weekday] = [row[weekday], courseName].filter(Boolean).join('、');
+  });
+  return rows;
 }
 
 export function displayClassroom(classroom: string | null | undefined): string {

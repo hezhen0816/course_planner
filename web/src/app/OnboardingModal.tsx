@@ -54,7 +54,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
         
         <button 
           onClick={onClose}
@@ -69,7 +69,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             {steps[currentStep].icon}
           </div>
           
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">
+          <h2 className="text-2xl font-semibold text-slate-800 mb-3">
             {steps[currentStep].title}
           </h2>
           
