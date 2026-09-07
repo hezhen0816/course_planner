@@ -595,17 +595,17 @@ function CourseResultRow({
           {conflicts.length > 0 && <span className="rounded bg-red-50 px-1.5 py-0.5 text-[11px] text-red-700">衝堂</span>}
         </div>
       </td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{offering.teacher || '未列教師'}</td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{formatCredits(offering.credits)}</td>
-      <td className="border-b border-slate-100 px-3 py-3">
-        <span className={`rounded-full px-2 py-1 text-xs font-medium ${gpaTone}`}>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-slate-700">{offering.teacher || '未列教師'}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-center tabular-nums text-slate-700">{formatCredits(offering.credits)}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3">
+        <span className={`inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium tabular-nums ${gpaTone}`}>
           {gpaLabel}
         </span>
       </td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{displaySlots(slots)}</td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{displayClassroom(offering.classroom)}</td>
-      <td className="border-b border-slate-100 px-3 py-3">
-        <span className={`rounded-full px-2 py-1 text-xs font-medium ${
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-slate-700">{displaySlots(slots)}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-slate-700">{displayClassroom(offering.classroom)}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3">
+        <span className={`inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium tabular-nums ${
           status === 'available' ? 'bg-emerald-50 text-emerald-700' : status === 'full' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
         }`}>
           {capacityLabel(offering)}
