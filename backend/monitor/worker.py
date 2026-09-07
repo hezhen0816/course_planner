@@ -11,6 +11,12 @@ from typing import List, Dict, Optional, Any
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
+# backend.config reads the environment at import time, so load the repo-root .env
+# before importing anything that depends on it (credentials, school_sessions).
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_REPO_ROOT, '.env'))
+load_dotenv()
+
 from .monitor import CourseMonitor, _enroll_thread_local
 from .config import MonitorConfig, CourseConfig
 from .email_sender import EmailSender
@@ -38,11 +44,6 @@ if not has_console:
     logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
-# Load environment variables from the repo root .env (works regardless of cwd),
-# then fall back to the process environment / a cwd .env.
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv(os.path.join(_REPO_ROOT, '.env'))
-load_dotenv()
 
 class SupabaseMonitor(CourseMonitor):
     def __init__(self, supabase_url: str, supabase_key: str):

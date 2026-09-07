@@ -370,7 +370,29 @@ class EnrollmentClient:
             "加選"
         )
     
+    LOGIN_FAILURE_COOLDOWN_AFTER = 3        # consecutive failures before pausing
+    LOGIN_FAILURE_COOLDOWN_SECONDS = 15 * 60
+
+    def _record_login_result(self, success: bool) -> None:
+        with self._rate_limit_lock:
+            if success:
+                self._login_failures = 0
+                self._login_cooldown_until = 0.0
+                return
+            self._login_failures = getattr(self, '_login_failures', 0) + 1
+            if self._login_failures >= self.LOGIN_FAILURE_COOLDOWN_AFTER:
+                self._login_cooldown_until = time.time() + self.LOGIN_FAILURE_COOLDOWN_SECONDS
+                self._login_failures = 0
+                logger.warning(f"連續登入失敗 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {self.LOGIN_FAILURE_COOLDOWN_SECONDS // 60} 分鐘")
+
     def login(self, username: str, password: str) -> Tuple[bool, str]:
+        success, message = self._login_once(username, password)
+        # 速率限制／冷卻中的拒絕不是 SSO 的判定，不計入連續失敗
+        if not (not success and ('間隔' in message or '限制' in message or '暫停自動登入' in message)):
+            self._record_login_result(success)
+        return success, message
+
+    def _login_once(self, username: str, password: str) -> Tuple[bool, str]:
         """
         登入選課系統（通過 SSO 單一登入）
         
@@ -387,6 +409,14 @@ class EnrollmentClient:
         allowed, limit_msg = self._check_login_rate_limit()
         if not allowed:
             return False, limit_msg
+
+        # 連續登入失敗保護：學校規定密碼錯 10 次鎖 15 分鐘；連續失敗達門檻就暫停 15 分鐘，
+        # 避免 worker 把帳號打到鎖住。成功一次即重置。
+        with self._rate_limit_lock:
+            cooldown_until = getattr(self, '_login_cooldown_until', 0.0)
+        if cooldown_until > time.time():
+            remaining = int(cooldown_until - time.time())
+            return False, f"連續登入失敗已達 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {remaining // 60} 分 {remaining % 60} 秒（保護帳號不被鎖定）"
 
         # 以「嘗試」計入速率限制（不論成敗），否則密碼錯誤時會每個週期都重打 SSO
         now = datetime.now()
