@@ -34,8 +34,7 @@ body {
 .settings-layout fieldset { padding: 28px; }
 .settings-layout fieldset label { padding-block: 13px; }
 .settings-layout section { overflow: hidden; }
-.search-layout { align-items: start; }
-.search-filters { grid-row: span 2; border-radius: 14px; box-shadow: none; }
+.search-filters { border-radius: 14px; box-shadow: none; }
 .search-layout table th { white-space: nowrap; }
 .search-layout table td { padding-block: 18px; }
 .search-layout table button { white-space: nowrap; }

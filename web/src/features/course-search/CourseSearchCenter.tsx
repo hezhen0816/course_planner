@@ -1,4 +1,5 @@
-import { FileText, Loader2, Upload } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { FileText, Loader2 } from 'lucide-react';
 import type { AppData, Course, CourseSearchResult, CourseSemesterInfo } from '../../types';
 import {
   type CapacityFilter,
@@ -96,151 +97,18 @@ export function CourseSearchCenter({
 }: CourseSearchCenterProps) {
   const virtualCourses = data.selectionPlan?.courses || [];
   return (
-    <div className="search-layout grid grid-cols-1 gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="search-filters rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 p-4">
-          <h2 className="text-lg font-semibold text-slate-900">篩選條件</h2>
-          <button onClick={onResetFilters} className="text-sm font-medium text-blue-600 hover:text-blue-700">
-            清除全部
-          </button>
-        </div>
-        <div className="space-y-4 p-4">
+    <div className="search-layout flex flex-col gap-5">
+      {/* Filters live in a horizontal toolbar so the results table gets the full
+          width and the 備註 column can show its text instead of truncating. */}
+      <section className="search-filters rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <label className="block text-xs font-medium text-slate-500">學期</label>
-            <select
-              aria-label="查詢學期"
-              value={querySemester}
-              onChange={(event) => onQuerySemesterChange(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            >
-              {courseSemesters.length === 0 && <option aria-label="查詢學期"
-              value={querySemester}>{querySemester}</option>}
-              {courseSemesters.map((semester) => (
-                <option key={semester.semester} value={semester.semester}>
-                  {semester.semester}{semester.english_label ? `・${semester.english_label}` : ''}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">目前查詢：{currentCourseSemesterLabel}</p>
+            <h2 className="text-2xl font-semibold text-slate-950">官方開課查詢</h2>
+            <p className="mt-1 text-sm text-slate-500">以課名或課碼查詢台科大開課資料，比較節次與名額後加入選課清單。</p>
           </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">課名 / 課碼</label>
-            <div className="mt-1 grid grid-cols-[82px_minmax(0,1fr)] gap-2">
-              <select
-                aria-label="搜尋方式"
-              value={manualMode}
-                onChange={(event) => onManualModeChange(event.target.value as SearchMode)}
-                className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
-              >
-                <option value="name">課名</option>
-                <option value="code">課碼</option>
-              </select>
-              <input
-                aria-label="課名或課碼"
-              value={manualQuery}
-                onChange={(event) => onManualQueryChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && canRunManualSearch) void onRunManualSearch();
-                }}
-                placeholder="資料結構"
-                className="min-w-0 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">教師</label>
-            <input
-              aria-label="教師"
-              value={teacherFilter}
-              onChange={(event) => onTeacherFilterChange(event.target.value)}
-              placeholder="輸入教師姓名"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">必選修</label>
-            <select
-              aria-label="必選修"
-              value={requireOptionFilter}
-              onChange={(event) => onRequireOptionFilterChange(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">全部</option>
-              <option value="R">必修</option>
-              <option value="E">選修</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">學分</label>
-            <select
-              aria-label="學分"
-              value={creditFilter}
-              onChange={(event) => onCreditFilterChange(event.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">不限</option>
-              <option value="0">0 學分</option>
-              <option value="1">1 學分</option>
-              <option value="2">2 學分</option>
-              <option value="3">3 學分</option>
-              <option value="4">4 學分</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">節次</label>
-            <input
-              aria-label="節次"
-              value={timeFilter}
-              onChange={(event) => onTimeFilterChange(event.target.value)}
-              placeholder="例如 M3 或 W4"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500">名額狀態</label>
-            <select
-              aria-label="名額狀態"
-              value={capacityFilter}
-              onChange={(event) => onCapacityFilterChange(event.target.value as CapacityFilter)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">全部</option>
-              <option value="available">尚有名額</option>
-              <option value="full">額滿</option>
-              <option value="unknown">未公告</option>
-            </select>
-          </div>
-
-          <button
-            onClick={() => void onRunManualSearch()}
-            disabled={!canRunManualSearch}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            搜尋課程
-          </button>
-          <button
-            onClick={onResetFilters}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            重設條件
-          </button>
-
-          <div className="border-t border-slate-100 pt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Upload className="h-4 w-4 text-blue-600" />
-                需求匯入
-              </h3>
-              {importStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
-            </div>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700">
-              <FileText className="h-4 w-4" />
+          <div className="flex shrink-0 items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700">
+              {importStatus === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
               上傳雙主修 PDF
               <input
                 type="file"
@@ -252,23 +120,140 @@ export function CourseSearchCenter({
                 }}
               />
             </label>
-            {importError && <p className="mt-2 text-sm text-red-600">{importError}</p>}
           </div>
         </div>
-      </aside>
+        <form
+          className="flex flex-wrap items-end gap-3 p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (canRunManualSearch) void onRunManualSearch();
+          }}
+        >
+          <FilterField label="學期" className="w-44">
+            <select
+              aria-label="查詢學期"
+              value={querySemester}
+              onChange={(event) => onQuerySemesterChange(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              {courseSemesters.length === 0 && <option value={querySemester}>{querySemester}</option>}
+              {courseSemesters.map((semester) => (
+                <option key={semester.semester} value={semester.semester}>
+                  {semester.semester}{semester.english_label ? `・${semester.english_label}` : ''}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+          <FilterField label="課名 / 課碼" className="min-w-[260px] flex-1">
+            <div className="grid grid-cols-[82px_minmax(0,1fr)] gap-2">
+              <select
+                aria-label="搜尋方式"
+                value={manualMode}
+                onChange={(event) => onManualModeChange(event.target.value as SearchMode)}
+                className={SELECT_CLASS}
+              >
+                <option value="name">課名</option>
+                <option value="code">課碼</option>
+              </select>
+              <input
+                aria-label="課名或課碼"
+                value={manualQuery}
+                onChange={(event) => onManualQueryChange(event.target.value)}
+                placeholder="資料結構"
+                autoFocus
+                className={INPUT_CLASS}
+              />
+            </div>
+          </FilterField>
+          <FilterField label="教師" className="w-36">
+            <input
+              aria-label="教師"
+              value={teacherFilter}
+              onChange={(event) => onTeacherFilterChange(event.target.value)}
+              placeholder="教師姓名"
+              className={INPUT_CLASS}
+            />
+          </FilterField>
+          <FilterField label="必選修" className="w-24">
+            <select
+              aria-label="必選修"
+              value={requireOptionFilter}
+              onChange={(event) => onRequireOptionFilterChange(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">全部</option>
+              <option value="R">必修</option>
+              <option value="E">選修</option>
+            </select>
+          </FilterField>
+          <FilterField label="學分" className="w-24">
+            <select
+              aria-label="學分"
+              value={creditFilter}
+              onChange={(event) => onCreditFilterChange(event.target.value)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">不限</option>
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </FilterField>
+          <FilterField label="節次" className="w-32">
+            <input
+              aria-label="節次"
+              value={timeFilter}
+              onChange={(event) => onTimeFilterChange(event.target.value)}
+              placeholder="M3 或 W4"
+              className={INPUT_CLASS}
+            />
+          </FilterField>
+          <FilterField label="名額" className="w-28">
+            <select
+              aria-label="名額狀態"
+              value={capacityFilter}
+              onChange={(event) => onCapacityFilterChange(event.target.value as CapacityFilter)}
+              className={SELECT_CLASS}
+            >
+              <option value="all">全部</option>
+              <option value="available">尚有名額</option>
+              <option value="full">額滿</option>
+              <option value="unknown">未公告</option>
+            </select>
+          </FilterField>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={!canRunManualSearch}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              搜尋課程
+            </button>
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              重設
+            </button>
+          </div>
+          {importError && <p className="w-full text-sm text-red-600">{importError}</p>}
+        </form>
+      </section>
 
       <section className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-950">官方開課查詢</h2>
-            <p className="mt-1 text-sm text-slate-500">以課名或課碼查詢台科大開課資料，比較節次與名額後加入選課清單。</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3 text-sm text-slate-500">
-            <span>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="flex items-baseline gap-3">
+            <h3 className="text-lg font-semibold text-slate-900">查詢結果</h3>
+            <span className="text-sm text-slate-500">
               {manualSearchSummary
                 ? `共找到 ${manualSearchSummary.resultCount} 筆，顯示 ${filteredManualResults.length} 筆`
-                : '輸入條件後開始查詢'}
+                : `${currentCourseSemesterLabel} · 輸入條件後開始查詢`}
             </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-3 text-sm text-slate-500">
             <button
               onClick={onExportResults}
               disabled={filteredManualResults.length === 0}
@@ -293,7 +278,7 @@ export function CourseSearchCenter({
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-[820px] w-full border-separate border-spacing-0 text-sm">
+          <table className="min-w-[1080px] w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
                 <th className="border-b border-slate-200 px-3 py-3">課碼</th>
@@ -311,7 +296,7 @@ export function CourseSearchCenter({
               {filteredManualResults.length === 0 && !manualSearchSummary && (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-500">
-                    先在左側輸入課名或課碼搜尋官方開課資料。
+                    先在上方輸入課名或課碼搜尋官方開課資料。
                   </td>
                 </tr>
               )}
@@ -330,7 +315,7 @@ export function CourseSearchCenter({
         </div>
       </section>
 
-      <details className="virtual-tray rounded-lg border border-slate-200 bg-white lg:col-start-2">
+      <details className="virtual-tray rounded-lg border border-slate-200 bg-white">
         <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-slate-700">虛擬加入 {virtualCourses.length} 門 · {formatCredits(virtualCourseCredits)} 學分 <span className="ml-2 font-normal text-slate-500">查看追蹤清單</span></summary>
         <div className="flex items-start justify-between border-b border-slate-100 p-4">
           <div>
@@ -379,6 +364,18 @@ export function CourseSearchCenter({
   );
 }
 
+const INPUT_CLASS = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+const SELECT_CLASS = 'w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+
+function FilterField({ label, className = '', children }: { label: string; className?: string; children: ReactNode }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 function CourseResultRow({
   offering,
   conflicts,
@@ -408,16 +405,16 @@ function CourseResultRow({
       </td>
       <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{offering.teacher || '未列教師'}</td>
       <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{formatCredits(offering.credits)}</td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{displaySlots(slots)}</td>
-      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{displayClassroom(offering.classroom)}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-slate-700">{displaySlots(slots)}</td>
+      <td className="whitespace-nowrap border-b border-slate-100 px-3 py-3 text-slate-700">{displayClassroom(offering.classroom)}</td>
       <td className="border-b border-slate-100 px-3 py-3">
-        <span className={`rounded-full px-2 py-1 text-xs font-medium ${
+        <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${
           status === 'available' ? 'bg-emerald-50 text-emerald-700' : status === 'full' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
         }`}>
           {capacityLabel(offering)}
         </span>
       </td>
-      <td className="max-w-[150px] truncate border-b border-slate-100 px-3 py-3 text-slate-500" title={offering.contents || undefined}>
+      <td className="min-w-[260px] max-w-xl whitespace-normal border-b border-slate-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
         {offering.contents || (conflicts.length > 0 ? `與 ${conflicts.map((course) => course.name).join('、')} 衝堂` : '無備註')}
       </td>
       <td className="sticky right-0 border-b border-slate-100 bg-white px-3 py-3">
