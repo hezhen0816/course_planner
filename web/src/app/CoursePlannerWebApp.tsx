@@ -108,6 +108,7 @@ export default function CoursePlannerWebApp() {
     manualMode,
     manualQuery,
     exactCourseNameSearch,
+    includeCrossSchool,
     manualStatus,
     manualError,
     manualSearchSummary,
@@ -121,6 +122,7 @@ export default function CoursePlannerWebApp() {
     canRunManualSearch,
     setManualQuery,
     setExactCourseNameSearch,
+    setIncludeCrossSchool,
     setTeacherFilter,
     setCreditFilter,
     setRequireOptionFilter,
@@ -784,6 +786,7 @@ export default function CoursePlannerWebApp() {
             manualMode={manualMode}
             manualQuery={manualQuery}
             exactCourseNameSearch={exactCourseNameSearch}
+            includeCrossSchool={includeCrossSchool}
             manualStatus={manualStatus}
             manualError={manualError}
             manualSearchSummary={manualSearchSummary}
@@ -801,6 +804,7 @@ export default function CoursePlannerWebApp() {
             onManualModeChange={handleManualModeChange}
             onManualQueryChange={setManualQuery}
             onExactCourseNameSearchChange={setExactCourseNameSearch}
+            onIncludeCrossSchoolChange={setIncludeCrossSchool}
             onTeacherFilterChange={setTeacherFilter}
             onCreditFilterChange={setCreditFilter}
             onRequireOptionFilterChange={setRequireOptionFilter}

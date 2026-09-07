@@ -23,7 +23,13 @@ _tr_course_cache: dict[str, tuple[datetime, list[dict[str, Any]]]] = {}
 # takes 60s+ to produce it in the evening; the default 30s timeout aborts it.
 FULL_COURSE_LIST_TIMEOUT = max(DEFAULT_TIMEOUT, 150)
 
-def query_course_payload(semester: str) -> dict[str, Any]:
+def query_course_payload(semester: str, *, include_cross_school: bool = False) -> dict[str, Any]:
+    """Payload for the school's course query API.
+
+    OnleyNTUST=1 (sic, the API's own spelling) limits results to NTUST's own
+    sections; the official query page includes 台大/師大 cross-school courses
+    by default, so callers can opt in with include_cross_school.
+    """
     return {
         "Semester": semester,
         "CourseNo": "",
@@ -37,7 +43,7 @@ def query_course_payload(semester: str) -> dict[str, Any]:
         "ForeignLanguage": 0,
         "OnlyIntensive": 0,
         "OnlyGeneral": 0,
-        "OnleyNTUST": 1,
+        "OnleyNTUST": 0 if include_cross_school else 1,
         "OnlyMaster": 0,
         "OnlyUnderGraduate": 0,
         "OnlyNode": 0,
@@ -100,8 +106,9 @@ def fetch_query_courses_filtered(
     course_no: str = "",
     course_name: str = "",
     verify_ssl: bool,
+    include_cross_school: bool = False,
 ) -> list[dict[str, Any]]:
-    payload = query_course_payload(semester)
+    payload = query_course_payload(semester, include_cross_school=include_cross_school)
     payload["CourseNo"] = course_no
     payload["CourseName"] = course_name
     response = requests.post(

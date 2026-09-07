@@ -280,11 +280,12 @@ def _require_official_action_confirmation(confirmed: bool) -> None:
 app.include_router(create_health_router(API_VERSION, OFFICIAL_SELECTION_CAPABILITIES))
 app.include_router(
     create_courses_router(
-        lambda semester, course_no, course_name, verify_ssl: fetch_query_courses_filtered(
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: fetch_query_courses_filtered(
             semester,
             course_no=course_no,
             course_name=course_name,
             verify_ssl=verify_ssl,
+            include_cross_school=include_cross_school,
         )
     )
 )

@@ -27,6 +27,7 @@ type CourseSearchCenterProps = {
   manualMode: SearchMode;
   manualQuery: string;
   exactCourseNameSearch: boolean;
+  includeCrossSchool: boolean;
   manualStatus: 'idle' | 'loading' | 'error';
   manualError: string;
   manualSearchSummary: ManualSearchSummary | null;
@@ -44,6 +45,7 @@ type CourseSearchCenterProps = {
   onManualModeChange: (mode: SearchMode) => void;
   onManualQueryChange: (query: string) => void;
   onExactCourseNameSearchChange: (enabled: boolean) => void;
+  onIncludeCrossSchoolChange: (enabled: boolean) => void;
   onTeacherFilterChange: (teacher: string) => void;
   onCreditFilterChange: (credits: string) => void;
   onRequireOptionFilterChange: (option: string) => void;
@@ -79,6 +81,7 @@ export function CourseSearchCenter({
   manualMode,
   manualQuery,
   exactCourseNameSearch,
+  includeCrossSchool,
   manualStatus,
   manualError,
   manualSearchSummary,
@@ -96,6 +99,7 @@ export function CourseSearchCenter({
   onManualModeChange,
   onManualQueryChange,
   onExactCourseNameSearchChange,
+  onIncludeCrossSchoolChange,
   onTeacherFilterChange,
   onCreditFilterChange,
   onRequireOptionFilterChange,
@@ -180,6 +184,16 @@ export function CourseSearchCenter({
             <div className="md:col-span-2 xl:col-span-2">
               <div className="flex items-center justify-between gap-3">
                 <label className="block text-xs font-medium text-slate-500">課名 / 課碼</label>
+                <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600" title="包含台大、師大的跨校課程（課碼 3N、3T 開頭）">
+                  <input
+                    type="checkbox"
+                    checked={includeCrossSchool}
+                    onChange={(event) => onIncludeCrossSchoolChange(event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  含台大／師大跨校課
+                </label>
                 <label className={`flex items-center gap-1.5 text-xs font-medium ${
                   manualMode === 'name' ? 'text-slate-600' : 'text-slate-400'
                 }`}>
@@ -192,6 +206,7 @@ export function CourseSearchCenter({
                   />
                   精確課名
                 </label>
+                </div>
               </div>
               <div className="mt-1 grid grid-cols-[112px_minmax(0,1fr)] gap-2">
                 <div className="inline-flex rounded-md border border-slate-300 bg-slate-50 p-0.5">

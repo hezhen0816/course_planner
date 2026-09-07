@@ -34,7 +34,7 @@ def test_course_search_endpoint_supports_name_and_code(monkeypatch) -> None:
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 
@@ -83,7 +83,7 @@ def test_course_search_endpoint_supports_partial_course_name(monkeypatch) -> Non
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 
@@ -119,7 +119,7 @@ def test_course_search_endpoint_merges_same_course_code_nodes(monkeypatch) -> No
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 
@@ -129,3 +129,28 @@ def test_course_search_endpoint_merges_same_course_code_nodes(monkeypatch) -> No
     assert len(response.json()) == 1
     assert response.json()[0]["course_no"] == "CS2002302"
     assert response.json()[0]["node"] == "M3, M4, W4"
+
+
+def test_course_search_endpoint_passes_cross_school_flag(monkeypatch) -> None:
+    seen: list[bool] = []
+
+    def fake_fetch(semester, course_no, course_name, verify_ssl, include_cross_school=False):
+        seen.append(include_cross_school)
+        return []
+
+    monkeypatch.setattr(backend_app, "fetch_query_courses_filtered", fake_fetch)
+    client = TestClient(backend_app.app)
+
+    assert client.get("/api/courses/search", params={"semester": "1151", "q": "經濟"}).status_code == 200
+    assert client.get(
+        "/api/courses/search",
+        params={"semester": "1151", "q": "經濟", "include_cross_school": "true"},
+    ).status_code == 200
+    assert seen == [False, True]
+
+
+def test_query_course_payload_toggles_ntust_only_flag() -> None:
+    from backend.tr_rooms import query_course_payload
+
+    assert query_course_payload("1151")["OnleyNTUST"] == 1
+    assert query_course_payload("1151", include_cross_school=True)["OnleyNTUST"] == 0

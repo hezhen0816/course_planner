@@ -67,8 +67,10 @@ export function searchCourses(
   query: string,
   mode: 'name' | 'code',
   gpaApiKey?: string,
+  includeCrossSchool = false,
 ): Promise<CourseSearchResult[]> {
   const params = new URLSearchParams({ semester, q: query, mode });
+  if (includeCrossSchool) params.set('include_cross_school', 'true');
   return apiRequest<CourseSearchResult[]>(`/api/courses/search?${params.toString()}`, {
     headers: gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : undefined,
   });

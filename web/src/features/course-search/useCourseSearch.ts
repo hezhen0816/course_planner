@@ -41,6 +41,9 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
   const [manualQuery, setManualQuery] = useState('');
   const [manualMode, setManualMode] = useState<SearchMode>('name');
   const [exactCourseNameSearch, setExactCourseNameSearch] = useState(false);
+  // Off by default: 台大/師大 cross-school sections are rarely selectable, so
+  // they only appear when explicitly requested (matches the school site's list).
+  const [includeCrossSchool, setIncludeCrossSchool] = useState(false);
   const [manualResults, setManualResults] = useState<CourseSearchResult[]>([]);
   const [manualStatus, setManualStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [manualError, setManualError] = useState('');
@@ -122,7 +125,7 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
       const gpaApiKey = gpaApiSettings?.enabled ? gpaApiSettings.apiKey.trim() : '';
       const searchQueries = queries && queries.length > 0 ? queries : [query];
       const resultGroups = await Promise.all(
-        searchQueries.map((searchQuery) => searchCourses(querySemester, searchQuery, mode, gpaApiKey || undefined)),
+        searchQueries.map((searchQuery) => searchCourses(querySemester, searchQuery, mode, gpaApiKey || undefined, includeCrossSchool)),
       );
       const seen = new Set<string>();
       const exactNames = mode === 'name' && exactCourseNameSearch
@@ -157,6 +160,7 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
   const resetCourseSearchFilters = () => {
     setManualQuery('');
     setExactCourseNameSearch(false);
+    setIncludeCrossSchool(false);
     setTeacherFilter('');
     setCreditFilter('all');
     setRequireOptionFilter('all');
@@ -201,6 +205,7 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
     manualMode,
     manualQuery,
     exactCourseNameSearch,
+    includeCrossSchool,
     manualStatus,
     manualError,
     manualSearchSummary,
@@ -214,6 +219,7 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
     canRunManualSearch,
     setManualQuery,
     setExactCourseNameSearch,
+    setIncludeCrossSchool,
     setTeacherFilter,
     setCreditFilter,
     setRequireOptionFilter,

@@ -1606,7 +1606,7 @@ def test_course_search_endpoint_supports_name_and_code(monkeypatch) -> None:
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 
@@ -1655,7 +1655,7 @@ def test_course_search_endpoint_supports_partial_course_name(monkeypatch) -> Non
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 
@@ -1691,7 +1691,7 @@ def test_course_search_endpoint_merges_same_course_code_nodes(monkeypatch) -> No
     monkeypatch.setattr(
         backend_app,
         "fetch_query_courses_filtered",
-        lambda semester, course_no, course_name, verify_ssl: courses,
+        lambda semester, course_no, course_name, verify_ssl, include_cross_school=False: courses,
     )
     client = TestClient(backend_app.app)
 

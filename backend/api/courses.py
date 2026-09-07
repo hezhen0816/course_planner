@@ -56,6 +56,7 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
         q: str = Query(min_length=1),
         mode: str = "name",
         refresh: bool = False,
+        include_cross_school: bool = False,
         gpa_api_key: str | None = Header(default=None, alias="X-GPA-API-Key"),
     ) -> list[CourseSearchResult]:
         try:
@@ -66,6 +67,7 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
                 course_no=q.strip() if mode == "code" else "",
                 course_name=q.strip() if mode == "name" else "",
                 verify_ssl=DEFAULT_VERIFY_SSL,
+                include_cross_school=include_cross_school,
             )
             normalized_query = _normalize_course_lookup_text(q)
             filtered = []
