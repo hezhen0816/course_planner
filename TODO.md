@@ -13,6 +13,9 @@
 
 ## P1 業務主線
 
+- [ ] 合併計畫 Phase 1–4（`docs/architecture/monitor-merge-plan.md`）：worker 搬入本 repo、SSO 合一、Monitor 前端併入、Web 回 Vercel。等這學期加退選結束再動；Phase 1 切換時必須先停舊 worker。
+- [ ] 舊 Supabase 專案 `qpdvtsbqdpitreslazoe` 確認一到兩週無需回退後可刪除或暫停；刪前再比對一次 `user_data` 內容。
+- [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼；Auth 的 Site URL／Redirect URLs 仍是 localhost，重設密碼信會導錯位置，要改成正式網址。
 - [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。
 - [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。
 
