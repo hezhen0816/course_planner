@@ -206,3 +206,7 @@ bash scripts/python.sh scripts/migrate_legacy_school_credentials.py --apply
 2. `backend/`、`supabase/`、`docs/`、`tests/` 維持根目錄，作為共享基礎設施、決策紀錄與可重跑 fixture。
 3. 新功能優先先判斷屬於 Web 還是 iOS，再決定落點。
 4. build output、暫存截圖與本機快取不進 repo；可重現的測試 fixture 才放入 `tests/fixtures/`。
+
+## 慣例文件分工
+
+規則邊界 → [AGENTS.md](AGENTS.md)；Claude 入口 → [CLAUDE.md](CLAUDE.md)；待辦 → [TODO.md](TODO.md)；決策查證 → [HISTORY.md](HISTORY.md)；過時文件 → `docs/archive/`。
