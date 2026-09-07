@@ -71,8 +71,33 @@ export function parseNodeSlots(node: string): string[] {
     .filter(Boolean);
 }
 
+const DAY_LABEL_BY_CODE: Record<string, string> = Object.fromEntries(DAY_COLUMNS.map((day) => [day.code, day.label]));
+
+/**
+ * Render slots grouped by weekday with the Chinese day annotated once, e.g.
+ * ["M6","M7","M8"] -> "M（一）6, 7, 8" and ["W8","R3","R4"] -> "W（三）8、R（四）3, 4".
+ * Unknown day codes fall back to the raw slot text.
+ */
 export function displaySlots(slots: string[]): string {
-  return slots.length > 0 ? slots.join(', ') : '未提供節次';
+  if (slots.length === 0) return '未提供節次';
+  const groups: { day: string; periods: string[] }[] = [];
+  slots.forEach((slot) => {
+    const match = slot.trim().toUpperCase().match(/^([A-Z])(\d{1,2}|[A-D])$/);
+    if (!match || !DAY_LABEL_BY_CODE[match[1]]) {
+      groups.push({ day: '', periods: [slot] });
+      return;
+    }
+    const [, day, period] = match;
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) {
+      last.periods.push(period);
+    } else {
+      groups.push({ day, periods: [period] });
+    }
+  });
+  return groups
+    .map((group) => (group.day ? `${group.day}（${DAY_LABEL_BY_CODE[group.day]}）${group.periods.join(', ')}` : group.periods.join(', ')))
+    .join('、');
 }
 
 export function displayClassroom(classroom: string | null | undefined): string {
