@@ -31,7 +31,9 @@ def query_course_payload(semester: str) -> dict[str, Any]:
         "CourseTeacher": "",
         "Dimension": "",
         "CourseNotes": "",
-        "CampusNotes": "Main_Campus",
+        # No campus filter: "Main_Campus" silently dropped 華夏校區 sections
+        # (e.g. BA305A001/2 統計學) that the official query page does show.
+        "CampusNotes": "",
         "ForeignLanguage": 0,
         "OnlyIntensive": 0,
         "OnlyGeneral": 0,
