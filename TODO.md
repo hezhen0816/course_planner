@@ -14,7 +14,9 @@
 
 ## P1 業務主線
 
-- [ ] 合併計畫 Phase 2–4（`docs/architecture/monitor-merge-plan.md`）：SSO 合一（以 `backend/monitor/enrollment.py` 的登入流程為準，含入口網回復與 CAPTCHA 偵測；`ntust_common.submit_hidden_form` 會盲目送出頁面第一個表單）、監控帳密改存 `app_private.school_credentials` 並淘汰 `ENCRYPTION_KEY`（`monitor/crypto.py` 失敗時回傳原字串，屬 fail-open）、課程查詢改共用 `tr_rooms` 的 fetcher、Monitor 前端併入、Web 回 Vercel。
+- [ ] 登入流程合一（Phase 2 未完成項）：`EnrollmentClient.login` 改用 `ntust_common.login_to_target` 在正式環境失敗（見 HISTORY 2026-09-08），需在不打正式 SSO 的前提下比對兩套流程的請求差異（表單選取、hidden 欄位、headers、redirect 順序）。在釐清前兩套並存：monitor 用自己的，Compass 呼叫端用 `ntust_common`。
+- [ ] 淘汰 `ENCRYPTION_KEY`：worker 已優先讀 `app_private`；等 Monitor 前端併入（不再寫 `user_settings.student_password`）後移除 legacy 路徑與 `rotate_encryption_key.py`。
+- [ ] 合併計畫 Phase 3–4：Monitor 前端併入 `web/src/features/monitor/`、Web 回 Vercel、Monitor repo 歸檔；課程查詢改共用 `tr_rooms` fetcher（低優先）。
 - [ ] 舊 Supabase 專案 `qpdvtsbqdpitreslazoe` 確認一到兩週無需回退後可刪除或暫停；刪前再比對一次 `user_data` 內容。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼；Auth 的 Site URL／Redirect URLs 仍是 localhost，重設密碼信會導錯位置，要改成正式網址。
 - [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。

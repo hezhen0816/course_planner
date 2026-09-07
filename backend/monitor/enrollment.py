@@ -169,7 +169,9 @@ class EnrollmentClient:
             return "登入失敗: SSO 需要 CAPTCHA / 瀏覽器端驗證，requests 流程無法完成"
 
         if 'ssoam2.ntust.edu.tw' in final_url:
-            return f"登入失敗: 停留在 SSO 頁面，認證未完成（最終 URL: {final_url}）"
+            snippet = re.sub(r"\s+", " ", page_text)[:160]
+            logger.warning(f"SSO 頁面內容（前 160 字）: {snippet}")
+            return f"登入失敗: 停留在 SSO 頁面，認證未完成（最終 URL: {final_url[:80]}…）"
 
         return f"登入狀態不明，最終 URL: {final_url}"
 

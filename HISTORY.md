@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 Phase 2 結果：session 共用與帳密集中成功，登入流程合一失敗已回退
+
+成功：worker 登入後把 cookie 寫進 `app_private.school_sessions`（官方初選 API 可直接復用，不必再登入）；監控 worker 改以 `app_private.school_credentials` 為帳密來源，兩位使用者的 `user_settings` 密文已用 `scripts/monitor/migrate_monitor_credentials.py` 搬入（比對過與 legacy 解密結果一致）；`monitor/crypto.py` 改 fail-closed。失敗：把 `EnrollmentClient.login` 改為呼叫 `ntust_common.login_to_target` 後，正式環境三個帳號都登不進（一個「登入後無法進入目標頁面」、兩個 SSO 回 500），持續約 45 分鐘每 20 秒重試；回退到 monitor 原本的登入流程後第一個帳號立即成功，另兩個仍停在 SSO 登入頁，研判是被連續失敗觸發學校端鎖定或節流。因此新增「連續 3 次登入失敗暫停 15 分鐘」保護。附帶發現 `backend/config.py` 在 import 時讀環境變數，worker 必須在 import `credentials`／`school_sessions` 之前 `load_dotenv`，否則 app_private 讀取與 session 寫入在 Windows 上靜默失敗。兩套登入流程差異尚未釐清，`ntust_common` 這次的強化（CAPTCHA 偵測、回呼表單挑選、SSO 首頁視為可回復）保留給 Compass 既有呼叫端。
+
 ## 2026-09-08 監控 worker 搬入本 repo（Phase 1）；查出 Railway 上仍有一個舊 worker 在跑
 
 `backend/monitor/` 為原 NTUST_Course_Monitor 的 `backend/src` + `worker.py`，改為套件相對匯入，以 `python -m backend.monitor.worker` 執行；Windows 新排程工作 `Course_Compass_Monitor`，舊的 `NTUST_Course_Monitor` 已停用。切換後心跳變成每分鐘兩筆，追查 Windows、Mac、公司 PC 都只有一個 worker，最後用 Supabase API 日誌看到寫入來源有兩個 IP：家裡的 49.159.x 與 Railway 的 152.55.x。Railway 專案 `giving-light` 有一個 `worker` 服務連著 NTUST_Course_Monitor repo，每次 push 就自動重新部署（今天 23:17、23:21、23:48 各一次），用的是共用 Supabase 專案的金鑰但 `ENCRYPTION_KEY` 是換鑰前的舊值，所以它查得到課程、寫得了心跳，卻解不開學生密碼、無法登入加選，未造成重複加選。已 `railway down`；服務仍在，下次 push 會再部署，需刪除。9-06 判定「Railway 額度用盡」是錯的：當時 `railway list` 就列了 giving-light，被忽略。順手修正：學校 API 的 `OnleyNTUST` 拼法（原 `OnlyNTUST` 被忽略，跨校課程會混入）、日誌與設定路徑改錨定 repo 根目錄、學期回退預設改由日期推算、移除已不存在的 `frontend/.env` 讀取。
