@@ -128,7 +128,7 @@ export function CourseSearchCenter({
     setPendingCourseName('');
   };
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="search-layout flex flex-col gap-4">
       <section className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -369,23 +369,33 @@ export function CourseSearchCenter({
         </div>
       </section>
 
-      <aside className="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-start justify-between border-b border-slate-100 p-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">未來規劃 ({virtualCourses.length})</h2>
-            <p className="mt-1 text-xs text-slate-500">本地規劃與待加簽追蹤課程。</p>
-          </div>
-          <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-            明確標注
+      {/* Future-planning tray sits under the results as a collapsible strip so
+          the table keeps the full width; cards flow horizontally in a grid. */}
+      <details className="virtual-tray rounded-lg border border-slate-200 bg-white shadow-sm" open={virtualCourses.length > 0}>
+        <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-5 py-4 text-sm">
+          <span className="font-semibold text-slate-900">未來規劃 {virtualCourses.length} 門 · {formatCredits(virtualCourseCredits)} 學分</span>
+          <span className="text-slate-500">本地規劃與待加簽追蹤課程，會自動儲存。</span>
+          <span className="ml-auto flex items-center gap-2">
+            <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">明確標注</span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                onOpenPlanning();
+              }}
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              前往選課工作台
+            </button>
           </span>
-        </div>
-        <div className="max-h-[640px] overflow-y-auto p-4">
+        </summary>
+        <div className="border-t border-slate-100 p-4">
           {virtualCourses.length === 0 ? (
             <div className="rounded-md border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
               從課程查詢加入的本地規劃或待加簽課程會出現在這裡。
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {virtualCourses.map((course, index) => (
                 <VirtualCourseCard
                   key={course.id}
@@ -397,22 +407,7 @@ export function CourseSearchCenter({
             </div>
           )}
         </div>
-        <div className="space-y-2 border-t border-slate-100 p-4">
-          <p className="text-xs text-slate-500">未來規劃學分：{formatCredits(virtualCourseCredits)} 學分</p>
-          <button
-            onClick={onOpenPlanning}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            前往選課工作台
-          </button>
-          <button
-            disabled
-            className="w-full cursor-not-allowed rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-400"
-          >
-            未來規劃已自動儲存
-          </button>
-        </div>
-      </aside>
+      </details>
     </div>
   );
 }

@@ -38,8 +38,6 @@ body {
 .search-layout table th { white-space: nowrap; }
 .search-layout table td { padding-block: 18px; }
 .search-layout table button { white-space: nowrap; }
-.virtual-tray { overflow: hidden; }
-.virtual-tray > div:first-of-type { display: none; }
 .history-semester summary::marker { color: #94a3b8; }
 .history-semester { overflow: hidden; }
 .planning-workspace > div:first-child { padding: 22px; }
