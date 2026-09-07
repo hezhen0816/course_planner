@@ -257,7 +257,9 @@ class NTUSTCourseAPI:
             "ForeignLanguage": kwargs.get("foreign_language", 0),
             "OnlyIntensive": kwargs.get("only_intensive", 0),
             "OnlyGeneral": kwargs.get("only_general", 0),
-            "OnlyNTUST": kwargs.get("only_ntust", 0),
+            # The school API really spells this key "OnleyNTUST"; the correctly-spelled
+            # name is ignored, which used to let cross-school sections leak into results.
+            "OnleyNTUST": kwargs.get("only_ntust", 0),
             "OnlyMaster": kwargs.get("only_master", 0),
             "OnlyUnderGraduate": kwargs.get("only_undergraduate", 0),
             "OnlyNode": kwargs.get("only_node", 0),

@@ -105,7 +105,8 @@ class ConfigManager:
     def _get_base_dir() -> str:
         """取得配置檔案應該建立的基礎目錄"""
         # 使用當前工作目錄
-        return os.getcwd()
+        # repo root (backend/monitor/config.py -> three levels up), independent of cwd
+        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     def __init__(self, config_file: Optional[str] = None):
         if config_file:

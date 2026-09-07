@@ -36,15 +36,11 @@ if not has_console:
     logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
 
-# Load environment variables
+# Load environment variables from the repo root .env (works regardless of cwd),
+# then fall back to the process environment / a cwd .env.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_REPO_ROOT, '.env'))
 load_dotenv()
-
-# Try loading from frontend/.env if not found
-if not os.getenv("VITE_SUPABASE_URL"):
-    frontend_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'frontend', '.env')
-    if os.path.exists(frontend_env_path):
-        load_dotenv(frontend_env_path)
-        logger.info(f"Loaded environment from {frontend_env_path}")
 
 class SupabaseMonitor(CourseMonitor):
     def __init__(self, supabase_url: str, supabase_key: str):

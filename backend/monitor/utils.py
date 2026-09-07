@@ -42,7 +42,9 @@ def setup_logging(level: int = logging.INFO, log_to_file: bool = True, log_to_co
         # 文件日誌處理器
         if log_to_file:
             # 創建 logs 目錄（如果不存在）
-            log_dir = Path('logs')
+            # Anchor at the repo root (backend/monitor/utils.py -> parents[2]) so the
+            # location does not depend on the launcher's cwd (uvicorn runs from backend/).
+            log_dir = Path(__file__).resolve().parents[2] / 'logs'
             log_dir.mkdir(exist_ok=True)
             
             # 單一檔案 + 每日輪替，保留 7 天（舊檔名為 ntust_monitor.log.YYYY-MM-DD）。

@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 監控 worker 搬入本 repo（Phase 1）；查出 Railway 上仍有一個舊 worker 在跑
+
+`backend/monitor/` 為原 NTUST_Course_Monitor 的 `backend/src` + `worker.py`，改為套件相對匯入，以 `python -m backend.monitor.worker` 執行；Windows 新排程工作 `Course_Compass_Monitor`，舊的 `NTUST_Course_Monitor` 已停用。切換後心跳變成每分鐘兩筆，追查 Windows、Mac、公司 PC 都只有一個 worker，最後用 Supabase API 日誌看到寫入來源有兩個 IP：家裡的 49.159.x 與 Railway 的 152.55.x。Railway 專案 `giving-light` 有一個 `worker` 服務連著 NTUST_Course_Monitor repo，每次 push 就自動重新部署（今天 23:17、23:21、23:48 各一次），用的是共用 Supabase 專案的金鑰但 `ENCRYPTION_KEY` 是換鑰前的舊值，所以它查得到課程、寫得了心跳，卻解不開學生密碼、無法登入加選，未造成重複加選。已 `railway down`；服務仍在，下次 push 會再部署，需刪除。9-06 判定「Railway 額度用盡」是錯的：當時 `railway list` 就列了 giving-light，被忽略。順手修正：學校 API 的 `OnleyNTUST` 拼法（原 `OnlyNTUST` 被忽略，跨校課程會混入）、日誌與設定路徑改錨定 repo 根目錄、學期回退預設改由日期推算、移除已不存在的 `frontend/.env` 讀取。
+
 ## 2026-09-07 Supabase 專案與 NTUST_Course_Monitor 合一（合併計畫 Phase 0）
 
 決策：資料庫沿用 Monitor 的專案 `eerlhmvwucnlbhemhvtz`（ACTIVE），否決沿用 Compass 免費專案（閒置一週暫停，24 小時 worker 撐不住）與 Windows 本地自架（運維與單點風險過高，見 `docs/architecture/monitor-merge-plan.md` §1a）。做法：以 catalog 反推的 `20260907120000_compass_core.sql` 一次建立 `user_data`、三張快照表、`app_private.*`、RPC 與 grants；舊專案 15 個增量 migration 不重放，搬到 `docs/archive/supabase-migrations-old-project/`，三個測試改讀該路徑。Monitor 的三個 migration 複製進本 repo，CLI 改連新專案並 repair 歷史。資料：5 筆 `user_data` 依 email 對照 UUID 搬入（2 人兩邊都有，3 人由 admin API 新建帳號並設臨時密碼）；快照以學號為鍵原樣搬；`school_credentials` 1 筆密文沿用同一把 `SCHOOL_CREDENTIALS_ENCRYPTION_SECRET`；`school_sessions` 不搬。未用到的 typed planner 表（`planner_profiles` 等，來自未合併分支）與 legacy `public.school_credentials` 不搬。

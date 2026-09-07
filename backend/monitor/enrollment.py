@@ -86,11 +86,9 @@ class EnrollmentClient:
         self.last_login_time = None
         self.last_enroll_time = None
         self._rate_limit_lock = threading.Lock()
-        self._response_log_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            'logs',
-            'enrollment_responses',
-        )
+        # repo root (backend/monitor/enrollment.py -> three levels up)
+        _repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self._response_log_dir = os.path.join(_repo_root, 'logs', 'enrollment_responses')
         retention_days_raw = self.env_manager.get('NTUST_ENROLLMENT_LOG_RETENTION_DAYS', '7')
         try:
             self._response_log_retention_days = max(0, int(retention_days_raw))

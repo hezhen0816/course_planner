@@ -10,7 +10,16 @@ from .utils import setup_logging, validate_semester
 logger = setup_logging()
 
 SEMESTERS_INFO_URL = "https://querycourse.ntust.edu.tw/QueryCourse/api/semestersinfo"
-DEFAULT_SEMESTER = "1142"
+def _guess_semester_from_date() -> str:
+    """Last-resort fallback: ROC academic year + term derived from today (Aug–Jan = 1, Feb–Jul = 2)."""
+    from datetime import date
+    today = date.today()
+    roc_year = today.year - 1911 if today.month >= 8 else today.year - 1912
+    term = 1 if (today.month >= 8 or today.month <= 1) else 2
+    return f"{roc_year}{term}"
+
+
+DEFAULT_SEMESTER = _guess_semester_from_date()
 
 
 def _extract_semester(items: Any) -> str:
