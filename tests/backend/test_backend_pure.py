@@ -1258,14 +1258,14 @@ def test_legacy_credential_migration_handles_old_ciphertext_payload(monkeypatch)
 
 
 def test_school_credentials_migration_keeps_plaintext_for_backend_promotion() -> None:
-    migration_sql = Path("supabase/migrations/20260612181431_add_school_credentials_table.sql").read_text()
+    migration_sql = Path("docs/archive/supabase-migrations-old-project/20260612181431_add_school_credentials_table.sql").read_text()
 
     assert "- 'school_password'" not in migration_sql
     assert "backend promotes and removes it" in migration_sql
 
 
 def test_school_credentials_private_migration_moves_public_rows_to_private_schema() -> None:
-    migration_sql = Path("supabase/migrations/20260613130302_move_school_credentials_private.sql").read_text()
+    migration_sql = Path("docs/archive/supabase-migrations-old-project/20260613130302_move_school_credentials_private.sql").read_text()
 
     assert "create table if not exists app_private.school_credentials" in migration_sql
     assert "from public.school_credentials" in migration_sql
@@ -1278,7 +1278,7 @@ def test_school_credentials_private_migration_moves_public_rows_to_private_schem
 
 def test_remove_legacy_school_password_migration_clears_content_and_legacy_content() -> None:
     migration_sql = Path(
-        "supabase/migrations/20260613031804_remove_legacy_school_password_from_user_data.sql"
+        "docs/archive/supabase-migrations-old-project/20260613031804_remove_legacy_school_password_from_user_data.sql"
     ).read_text()
 
     assert "content #>> '{settings,school_password}'" in migration_sql

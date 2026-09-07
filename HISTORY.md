@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-07 Supabase 專案與 NTUST_Course_Monitor 合一（合併計畫 Phase 0）
+
+決策：資料庫沿用 Monitor 的專案 `eerlhmvwucnlbhemhvtz`（ACTIVE），否決沿用 Compass 免費專案（閒置一週暫停，24 小時 worker 撐不住）與 Windows 本地自架（運維與單點風險過高，見 `docs/architecture/monitor-merge-plan.md` §1a）。做法：以 catalog 反推的 `20260907120000_compass_core.sql` 一次建立 `user_data`、三張快照表、`app_private.*`、RPC 與 grants；舊專案 15 個增量 migration 不重放，搬到 `docs/archive/supabase-migrations-old-project/`，三個測試改讀該路徑。Monitor 的三個 migration 複製進本 repo，CLI 改連新專案並 repair 歷史。資料：5 筆 `user_data` 依 email 對照 UUID 搬入（2 人兩邊都有，3 人由 admin API 新建帳號並設臨時密碼）；快照以學號為鍵原樣搬；`school_credentials` 1 筆密文沿用同一把 `SCHOOL_CREDENTIALS_ENCRYPTION_SECRET`；`school_sessions` 不搬。未用到的 typed planner 表（`planner_profiles` 等，來自未合併分支）與 legacy `public.school_credentials` 不搬。
+
 ## 2026-09-07 課程查詢預設不含台大／師大跨校課，另加勾選
 
 學校查詢頁預設包含跨校課（課碼 3N、3T），App 原本用 `OnleyNTUST=1` 排除。決定加「含台大／師大跨校課」勾選、預設不勾，兼顧結果乾淨與對照學校頁面。查「經濟」：不勾 12 筆，勾選 46 筆（34 筆跨校）。否決「一律包含」：跨校課多數不可選，會稀釋結果。
