@@ -1,3 +1,4 @@
+PySocks>=1.7.1
 beautifulsoup4>=4.12.0,<5.0.0
 cryptography>=43.0.0,<47.0.0
 fastapi>=0.116.0,<1.0.0
@@ -5,4 +6,7 @@ pdfplumber>=0.11.0,<1.0.0
 python-dotenv>=1.1.0,<2.0.0
 python-multipart>=0.0.20,<1.0.0
 requests>=2.31.0,<3.0.0
+rich>=13.0.0,<14.0.0
+supabase>=2.0.0
+tzdata
 uvicorn>=0.35.0,<1.0.0
