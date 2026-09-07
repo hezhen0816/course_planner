@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 from .config import CourseConfig
 from .env_manager import EnvManager
 from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging
+from ..ntust_common import login_to_target
 
 # 禁用 SSL 警告（如果禁用驗證）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -372,18 +373,13 @@ class EnrollmentClient:
     
     def login(self, username: str, password: str) -> Tuple[bool, str]:
         """
-        登入選課系統（通過 SSO 單一登入）
-        
-        重要提醒：請遵守學校選課公平原則，不要過度使用自動登入功能
-        
-        Args:
-            username: 學號
-            password: 密碼
-        
+        登入選課系統（通過 SSO 單一登入），流程共用 backend/ntust_common.login_to_target。
+
+        重要提醒：請遵守學校選課公平原則，不要過度使用自動登入功能。
+
         Returns:
             (是否成功, 訊息)
         """
-        # 檢查速率限制
         allowed, limit_msg = self._check_login_rate_limit()
         if not allowed:
             return False, limit_msg
@@ -394,217 +390,40 @@ class EnrollmentClient:
             self.login_times.append(now)
             self.last_login_time = now
 
+        proxy_info, proxy_details = self._get_proxy_info_for_logging()
+        logger.info(f"正在登入選課系統... - {proxy_info}{proxy_details}")
         try:
-            # 1. 訪問選課系統，會被重定向到 SSO 登入頁面
-            # 記錄代理使用狀態
-            proxy_info, proxy_details = self._get_proxy_info_for_logging()
-            logger.info(f"正在訪問選課系統... - {proxy_info}{proxy_details}")
-            response = self.session.get(self.LOGIN_URL, verify=self.verify_ssl, timeout=self.REQUEST_TIMEOUT, allow_redirects=True)
-            response.raise_for_status()
-            
-            # 2. 檢查是否已經在 SSO 登入頁面
-            sso_base = "https://ssoam2.ntust.edu.tw"
-            if sso_base in response.url:
-                logger.info("已重定向到 SSO 登入頁面")
-                sso_login_url = response.url
-            else:
-                # 如果沒有重定向，嘗試直接訪問 SSO
-                soup = BeautifulSoup(response.text, 'html.parser')
-                form = soup.find('form')
-                if form:
-                    # 從表單中獲取 ReturnUrl
-                    return_url_input = form.find('input', {'name': 'ReturnUrl'})
-                    if return_url_input:
-                        return_url = return_url_input.get('value', '')
-                        sso_login_url = f"{sso_base}/account/login?ReturnUrl={return_url}"
-                    else:
-                        sso_login_url = f"{sso_base}/account/login"
-                else:
-                    return False, "無法找到登入表單或重定向資訊"
-            
-            # 3. 獲取 SSO 登入頁面
-            proxy_info, proxy_details = self._get_proxy_info_for_logging()
-            logger.info(f"正在獲取 SSO 登入頁面... - {proxy_info}{proxy_details}")
-            sso_response = self.session.get(sso_login_url, verify=self.verify_ssl, timeout=self.REQUEST_TIMEOUT)
-            sso_response.raise_for_status()
-            
-            # 4. 解析 SSO 登入表單
-            soup = BeautifulSoup(sso_response.text, 'html.parser')
-            form = soup.find('form')
-            if not form:
-                return False, "無法找到 SSO 登入表單"
-            
-            # 5. 獲取 CSRF token
-            csrf_token = None
-            csrf_input = form.find('input', {'name': '__RequestVerificationToken'})
-            if csrf_input:
-                csrf_token = csrf_input.get('value', '')
-            
-            # 6. 準備登入資料
-            login_data = {
-                'Username': username,
-                'Password': password,
-                'captcha': ''  # 驗證碼留空
-            }
-            
-            # 添加 CSRF token
-            if csrf_token:
-                login_data['__RequestVerificationToken'] = csrf_token
-            
-            # 添加表單中的其他隱藏欄位
-            hidden_inputs = form.find_all('input', {'type': 'hidden'})
-            for hidden_input in hidden_inputs:
-                name = hidden_input.get('name')
-                value = hidden_input.get('value', '')
-                if name and name not in ['__RequestVerificationToken']:
-                    login_data[name] = value
-            
-            # 7. 提交 SSO 登入表單
-            form_action = form.get('action', '/')
-            # 檢查 action 是否已經是完整 URL
-            if form_action.startswith('http://') or form_action.startswith('https://'):
-                sso_submit_url = form_action
-            elif form_action.startswith('/'):
-                # 絕對路徑，直接拼接
-                sso_submit_url = f"{sso_base}{form_action}"
-            else:
-                # 相對路徑，需要拼接
-                sso_submit_url = f"{sso_base}/{form_action}"
-            proxy_info, proxy_details = self._get_proxy_info_for_logging()
-            logger.info(f"正在提交 SSO 登入資訊... - {proxy_info}{proxy_details}")
-            login_response = self.session.post(
-                sso_submit_url,
-                data=login_data,
-                verify=self.verify_ssl,
-                timeout=self.REQUEST_TIMEOUT,
-                allow_redirects=True
+            login_to_target(
+                self.session,
+                username,
+                password,
+                f"{self.BASE_URL}/First/A06/A06",
+                self.verify_ssl,
             )
-            
-            # 8. 檢查登入是否成功
-            # 登入成功應該會重定向回選課系統
-            login_response = self._submit_oidc_form_if_present(login_response)
-            final_url = login_response.url
-            
-            # 檢查是否仍停留在 SSO 頁面（表示登入失敗或驗證未完成）
-            if 'ssoam2.ntust.edu.tw' in final_url:
-                sso_soup = BeautifulSoup(login_response.text or '', 'html.parser')
-                still_has_login_form = bool(sso_soup.find('input', {'name': 'Username'}) or sso_soup.find('input', {'name': 'Password'}))
-                if still_has_login_form or '/account/login' in final_url.lower():
-                    return False, self._extract_sso_failure_reason(login_response.text, final_url)
-                # 落在 SSO 首頁且沒有登入表單：SSO 端很可能已建立 session，只是沒帶 ReturnUrl 回來。
-                logger.info(f"SSO 登入後停在 {final_url}（無登入表單），嘗試重新進入選課系統...")
-            
-            # 檢查是否成功重定向到選課系統
-            if 'courseselection.ntust.edu.tw' in final_url:
-                # 可能需要處理 OIDC 回調
-                if 'signin-oidc' in final_url:
-                    # 處理 OIDC 回調表單
-                    oidc_soup = BeautifulSoup(login_response.text, 'html.parser')
-                    oidc_form = oidc_soup.find('form')
-                    if oidc_form:
-                        # 自動提交 OIDC 回調表單
-                        form_action = oidc_form.get('action', '')
-                        if not form_action.startswith('http'):
-                            form_action = f"{self.BASE_URL}{form_action}"
-                        
-                        # 獲取表單中的所有隱藏欄位
-                        form_data = {}
-                        for input_tag in oidc_form.find_all('input', type='hidden'):
-                            name = input_tag.get('name')
-                            value = input_tag.get('value', '')
-                            if name:
-                                form_data[name] = value
-                        
-                        # 提交 OIDC 回調
-                        oidc_response = self.session.post(
-                            form_action,
-                            data=form_data,
-                            verify=self.verify_ssl,
-                            timeout=self.REQUEST_TIMEOUT,
-                            allow_redirects=True
-                        )
-                        final_url = oidc_response.url
-                
-                # 驗證登入狀態：訪問選課頁面
-                verify_response = self.session.get(
-                    f"{self.BASE_URL}/First/A06/A06",
-                    verify=self.verify_ssl,
-                    timeout=self.REQUEST_TIMEOUT,
-                    allow_redirects=True
-                )
-                
-                # 檢查是否成功訪問選課頁面
-                if 'signin-oidc' not in verify_response.url and 'login' not in verify_response.url.lower():
-                    self.is_logged_in = True
-                    return True, f"登入成功，已重定向到選課系統"
-                else:
-                    return False, "登入後無法訪問選課頁面，可能認證未完成"
-            
-            # SSO 登入成功但被導到其他站台（例如 i.ntust.edu.tw 入口網），ReturnUrl 遺失。
-            # 此時 SSO 端已有 session，重新進入選課系統會經 OIDC 靜默完成登入。
-            if 'courseselection.ntust.edu.tw' not in final_url:
-                if 'ssoam2.ntust.edu.tw' not in final_url:
-                    logger.info(f"SSO 登入後落在 {final_url}，改以既有 SSO session 重新進入選課系統...")
-                reenter = self.session.get(
-                    self.LOGIN_URL,
-                    verify=self.verify_ssl,
-                    timeout=self.REQUEST_TIMEOUT,
-                    allow_redirects=True,
-                )
-                reenter = self._submit_oidc_form_if_present(reenter)
-                if 'ssoam2.ntust.edu.tw' not in reenter.url:
-                    verify_response = self.session.get(
-                        f"{self.BASE_URL}/First/A06/A06",
-                        verify=self.verify_ssl,
-                        timeout=self.REQUEST_TIMEOUT,
-                        allow_redirects=True,
-                    )
-                    if 'signin-oidc' not in verify_response.url and 'login' not in verify_response.url.lower():
-                        self.is_logged_in = True
-                        return True, f"登入成功（經 {final_url.split('/')[2]} 轉回選課系統）"
-                    final_url = verify_response.url
-                else:
-                    final_url = reenter.url
-
-            # 檢查回應內容
-            if '選課' in login_response.text or 'course' in login_response.text.lower():
-                # 驗證登入狀態
-                verify_response = self.session.get(
-                    f"{self.BASE_URL}/First/A06/A06",
-                    verify=self.verify_ssl,
-                    timeout=self.REQUEST_TIMEOUT,
-                    allow_redirects=True
-                )
-                
-                if 'signin-oidc' not in verify_response.url and 'login' not in verify_response.url.lower():
-                    self.is_logged_in = True
-                    return True, "登入成功"
-            
-            return False, self._extract_sso_failure_reason(login_response.text, final_url)
-            
         except requests.exceptions.Timeout as e:
             from .utils import _is_network_disconnected
             if _is_network_disconnected(e):
-                logger.error(f"登入超時：當前網路已中斷 - {str(e)}")
-                return False, f"登入超時：當前網路已中斷，請檢查網路連接"
-            else:
-                logger.error(f"登入超時: {str(e)}")
-                return False, f"登入超時，請檢查網絡連接: {str(e)}"
+                logger.error(f"登入超時：當前網路已中斷 - {e}")
+                return False, "登入超時：當前網路已中斷，請檢查網路連接"
+            logger.error(f"登入超時: {e}")
+            return False, f"登入超時: {e}"
         except requests.exceptions.ConnectionError as e:
-            from .utils import _is_network_disconnected
-            if _is_network_disconnected(e):
-                logger.error(f"登入連接錯誤：當前網路已中斷 - {str(e)}")
-                return False, f"無法連接到服務器：當前網路已中斷，請檢查網路連接"
-            else:
-                logger.error(f"登入連接錯誤: {str(e)}")
-                return False, f"無法連接到服務器，請檢查網絡連接: {str(e)}"
+            logger.error(f"登入連接錯誤: {e}")
+            return False, f"無法連接到服務器，請檢查網絡連接: {e}"
         except requests.exceptions.RequestException as e:
-            logger.error(f"登入請求錯誤: {str(e)}")
-            return False, f"登入請求失敗: {str(e)}"
+            logger.error(f"登入請求錯誤: {e}")
+            return False, f"登入請求失敗: {e}"
+        except RuntimeError as e:
+            # ntust_common 已把 SSO 端的原因整理成訊息（帳密錯誤、CAPTCHA、停在登入頁…）
+            logger.warning(f"登入失敗: {e}")
+            return False, str(e)
         except Exception as e:
-            logger.error(f"登入過程發生未預期的錯誤: {str(e)}", exc_info=True)
-            return False, f"登入錯誤: {str(e)}"
-    
+            logger.error(f"登入過程發生未預期的錯誤: {e}", exc_info=True)
+            return False, f"登入錯誤: {e}"
+
+        self.is_logged_in = True
+        return True, "登入成功"
+
     def _check_session_quick(self) -> bool:
         """
         快速檢查 session 是否有效（使用 HEAD 請求，更快）

@@ -121,6 +121,10 @@ class CourseMonitor:
             self._query_fail_last_logged.pop(identifier, None)
         return max(0.0, last_fail - since)
 
+    def _on_login_success(self, user_id, student_id, enroll_client) -> None:
+        """Hook: called after a successful SSO login (worker publishes the session)."""
+        return None
+
     def _get_course_identifier(self, course: CourseConfig) -> str:
         """取得課程唯一識別碼"""
         return course.course_no or course.course_name or course.alias
@@ -146,6 +150,7 @@ class CourseMonitor:
                 logger.info(f"[{uid_tag}] 預先登入成功，session 已準備就緒")
                 self.last_session_check = time.time()
                 self.last_session_keepalive = time.time()
+                self._on_login_success(getattr(self, 'user_id', None), self.config.student_id, self.enrollment_client)
             else:
                 logger.warning(f"[{uid_tag}] 預先登入失敗: {msg}")
             return success
@@ -614,6 +619,8 @@ class CourseMonitor:
                 if not enroll_client.is_logged_in:
                     logger.warning("加選前 session 無效，立即重新登入...")
                     login_success, login_msg = enroll_client.login(student_id, student_password)
+                    if login_success:
+                        self._on_login_success(user_id, student_id, enroll_client)
                     if not login_success:
                         self._add_system_notification(
                             f"無法加選：{course_info.get('CourseName', course.course_name)} ({course_info.get('CourseNo', course.course_no)}) - 登入失敗: {login_msg}",
@@ -625,6 +632,8 @@ class CourseMonitor:
                     if not enroll_client._check_session_quick():
                         logger.warning("加選前 session 檢查失敗，立即重新登入...")
                         login_success, login_msg = enroll_client.login(student_id, student_password)
+                        if login_success:
+                            self._on_login_success(user_id, student_id, enroll_client)
                         if not login_success:
                             self._add_system_notification(
                                 f"無法加選：{course_info.get('CourseName', course.course_name)} ({course_info.get('CourseNo', course.course_no)}) - 登入失敗: {login_msg}",

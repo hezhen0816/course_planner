@@ -23,6 +23,7 @@ try:
     )
     from .time_utils import now
     from .ntust_common import login, normalize, requires_hidden_form_callback, split_lines, submit_hidden_form
+    from .school_sessions import session_state_from_requests_session
     from .schedule import find_latest_course_list_url, parse_course_list
     from .tr_rooms import fetch_current_query_semester, fetch_query_courses_filtered
 except ImportError:  # pragma: no cover
@@ -37,6 +38,7 @@ except ImportError:  # pragma: no cover
         INITIAL_SELECTION_URL,
     )
     from ntust_common import login, normalize, requires_hidden_form_callback, split_lines, submit_hidden_form
+    from school_sessions import session_state_from_requests_session
     from schedule import find_latest_course_list_url, parse_course_list
     from tr_rooms import fetch_current_query_semester, fetch_query_courses_filtered
     from time_utils import now
@@ -118,24 +120,7 @@ class OfficialSelectionClient:
             return self._workspace_payload(self._get_workspace_page(verify_ssl), verify_ssl)
 
     def export_session_state(self) -> dict[str, Any]:
-        cookies: list[dict[str, Any]] = []
-        for cookie in self.session.cookies:
-            cookies.append(
-                {
-                    "name": cookie.name,
-                    "value": cookie.value,
-                    "domain": cookie.domain,
-                    "path": cookie.path,
-                    "expires": cookie.expires,
-                    "secure": cookie.secure,
-                    "rest": dict(getattr(cookie, "_rest", {}) or {}),
-                }
-            )
-        return {
-            "cookies": cookies,
-            "is_logged_in": self.is_logged_in,
-            "saved_at": now().isoformat(),
-        }
+        return session_state_from_requests_session(self.session, is_logged_in=self.is_logged_in)
 
     def restore_session_state(self, session_state: dict[str, Any]) -> bool:
         cookies = session_state.get("cookies")

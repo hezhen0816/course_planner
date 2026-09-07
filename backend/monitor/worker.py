@@ -18,6 +18,8 @@ from .enrollment import EnrollmentClient
 from .semester import get_default_semester
 from .utils import setup_logging
 from .crypto import CryptoManager
+from ..credentials import get_school_credentials_secret, CredentialStoreError
+from ..school_sessions import save_school_session_state, session_state_from_requests_session
 
 # Setup logging
 # Ensure console logging is enabled even if setup_logging was called by imports
@@ -70,6 +72,18 @@ class SupabaseMonitor(CourseMonitor):
         self._user_workers: Dict[str, Dict[str, Any]] = {}
         
         self.crypto = CryptoManager()
+
+    def _on_login_success(self, user_id, student_id, enroll_client) -> None:
+        """Publish the worker's SSO session so the official-selection API can reuse it
+        instead of logging in again (the worker is the single session holder)."""
+        if not user_id or not student_id:
+            return
+        try:
+            state = session_state_from_requests_session(enroll_client.session, is_logged_in=True)
+            save_school_session_state(user_id, student_id, state)
+            logger.info(f"[{user_id[:8]}] 已將選課系統 session 寫入 school_sessions")
+        except Exception as e:
+            logger.warning(f"[{user_id[:8]}] 寫入 school_sessions 失敗：{e}")
 
     def _resolve_log_user_id(self, user_id: Optional[str] = None) -> Optional[str]:
         """Resolve target user_id for system_logs writes with thread-local priority."""
@@ -302,10 +316,21 @@ class SupabaseMonitor(CourseMonitor):
                         course.reset_attempts = c_data.get('reset_attempts', False)
                         user_courses.append(course)
 
+                    # 校務帳密以 app_private.school_credentials 為準（Compass 統一保存），
+                    # 沒有才退回 user_settings 的 legacy 欄位。
+                    student_id = settings.get('student_id')
+                    try:
+                        secret = get_school_credentials_secret(user_id)
+                        if secret.get('hasPassword') and secret.get('username'):
+                            student_id = secret['username']
+                            student_password = secret['password']
+                    except (CredentialStoreError, Exception) as e:
+                        logger.debug(f"讀取 app_private 校務帳密失敗（uid={user_id[:8]}），改用 user_settings：{e}")
+
                     check_interval_ms = settings.get('check_interval') or 30000
                     self.users_data.append({
                         'user_id': user_id,
-                        'student_id': settings.get('student_id'),
+                        'student_id': student_id,
                         'student_password': student_password,
                         'check_interval': check_interval_ms / 1000.0,
                         'random_interval': settings.get('random_interval', 5),

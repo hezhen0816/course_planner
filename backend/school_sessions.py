@@ -27,6 +27,28 @@ except ImportError:  # pragma: no cover
 OFFICIAL_SESSION_TTL_SECONDS = 25 * 60
 
 
+def session_state_from_requests_session(session: "requests.Session", *, is_logged_in: bool = True) -> dict[str, Any]:
+    """Serialise a requests.Session cookie jar into the school_sessions state format."""
+    cookies: list[dict[str, Any]] = []
+    for cookie in session.cookies:
+        cookies.append(
+            {
+                "name": cookie.name,
+                "value": cookie.value,
+                "domain": cookie.domain,
+                "path": cookie.path,
+                "expires": cookie.expires,
+                "secure": cookie.secure,
+                "rest": dict(getattr(cookie, "_rest", {}) or {}),
+            }
+        )
+    return {
+        "cookies": cookies,
+        "is_logged_in": is_logged_in,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def official_session_expires_at() -> datetime:
     return datetime.now(timezone.utc) + timedelta(seconds=OFFICIAL_SESSION_TTL_SECONDS)
 
