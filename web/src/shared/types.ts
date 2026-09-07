@@ -12,6 +12,7 @@ export type CourseCategory =
 export type GenEdDimension = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'None';
 export type CourseProgram = 'home' | 'double_major' | 'minor' | 'other';
 export type RequirementKind = 'course' | 'choice' | 'course_group' | 'credit_pool';
+export type GpaStatus = 'not_enabled' | 'found' | 'no_data' | 'error';
 
 export interface GradingItem {
   id: string;
@@ -41,6 +42,10 @@ export interface ScheduledOffering {
   slots: string[];
   requireOption: string;
   contents: string;
+  gpa?: number | null;
+  gpaStatus?: GpaStatus;
+  selectedCount?: number | null;
+  capacity?: number | null;
 }
 
 export interface Course {
@@ -76,13 +81,6 @@ export interface SelectionPlan {
   updatedAt?: string;
 }
 
-export interface SchoolSyncStatus {
-  scheduleSyncedAt?: string;
-  scheduleCourseCount?: number;
-  historyImportedAt?: string;
-  historyRecordCount?: number;
-}
-
 export interface SchoolCredentials {
   username: string;
   hasPassword: boolean;
@@ -99,6 +97,24 @@ export interface AppTargets {
   home_elective: number;
   double_major: number;
   minor: number;
+}
+
+export interface GpaApiSettings {
+  enabled: boolean;
+  apiKey: string;
+  updatedAt?: string;
+}
+
+export interface ProgramDepartmentSettings {
+  homeDepartmentCode?: string;
+  doubleMajorDepartmentCode?: string;
+  minorDepartmentCode?: string;
+}
+
+export interface AppSettings {
+  gpaApi?: GpaApiSettings;
+  programDepartments?: ProgramDepartmentSettings;
+  [key: string]: unknown;
 }
 
 export interface RequirementOption {
@@ -148,10 +164,8 @@ export interface AppData {
   schemaVersion: number;
   semesters: Semester[];
   targets: AppTargets;
-  settings?: Record<string, unknown>;
+  settings?: AppSettings;
   selectionPlan?: SelectionPlan;
-  /** When school data was last pulled through the backend; shown as sync status. */
-  schoolSync?: SchoolSyncStatus;
   requirementSets: RequirementSet[];
   pendingRequirements: PendingRequirement[];
   historyRecords: AcademicHistoryRecord[];
@@ -182,6 +196,8 @@ export interface CourseSearchResult {
   classroom: string;
   node: string;
   contents: string;
+  gpa?: number | null;
+  gpa_status?: GpaStatus;
   selected_count?: number | null;
   capacity?: number | null;
 }
@@ -273,6 +289,8 @@ export interface OfficialSelectionAvailableCourse {
   course_no: string;
   course_name: string;
   teacher: string;
+  gpa?: number | null;
+  gpa_status?: GpaStatus;
 }
 
 export interface OfficialSelectionRegisteredCourse {
@@ -283,6 +301,28 @@ export interface OfficialSelectionRegisteredCourse {
   credits?: number | null;
   require_option?: string;
   teacher?: string;
+  classroom?: string;
+  node?: string;
+  contents?: string;
+  selected_count?: number | null;
+  capacity?: number | null;
+  gpa?: number | null;
+  gpa_status?: GpaStatus;
+}
+
+export interface OfficialSelectionRequiredPresetCourse {
+  course_no: string;
+  course_name: string;
+  credits?: number | null;
+  require_option?: string;
+  teacher?: string;
+  classroom?: string;
+  node?: string;
+  contents?: string;
+  selected_count?: number | null;
+  capacity?: number | null;
+  gpa?: number | null;
+  gpa_status?: GpaStatus;
 }
 
 export interface OfficialSelectionSyncResponse {
@@ -299,5 +339,6 @@ export interface OfficialSelectionSyncResponse {
   schedule_rows: Record<string, string>[];
   selection_list_rows: Record<string, string>[];
   required_preset_rows: Record<string, string>[];
+  required_preset_courses: OfficialSelectionRequiredPresetCourse[];
   notices: string[];
 }

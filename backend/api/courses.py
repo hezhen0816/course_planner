@@ -5,13 +5,15 @@ from collections.abc import Callable
 from typing import Any
 
 import requests
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 
 try:
     from ..config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from ..gpa import fetch_course_gpa
     from ..models import CourseSearchResult, CourseSemesterInfo
 except ImportError:  # pragma: no cover - supports PYTHONPATH=backend imports.
     from config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from gpa import fetch_course_gpa
     from models import CourseSearchResult, CourseSemesterInfo
 
 
@@ -54,6 +56,7 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
         q: str = Query(min_length=1),
         mode: str = "name",
         refresh: bool = False,
+        gpa_api_key: str | None = Header(default=None, alias="X-GPA-API-Key"),
     ) -> list[CourseSearchResult]:
         try:
             if mode not in {"name", "code"}:
@@ -70,18 +73,29 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
                 course_no = str(course.get("CourseNo") or "")
                 course_name = str(course.get("CourseName") or "")
                 normalized_course_name = _normalize_course_lookup_text(course_name)
+                normalized_course_no = _normalize_course_lookup_text(course_no)
                 if mode == "name" and normalized_query not in normalized_course_name:
                     continue
-                if mode == "code" and normalized_query not in course_no.lower():
+                if mode == "code" and normalized_query not in normalized_course_no:
                     continue
                 filtered.append(_course_search_result(course))
-            return _sort_course_search_results(_merge_course_search_results(filtered), q)
+            results = _sort_course_search_results(_merge_course_search_results(filtered), q)
+            if gpa_api_key:
+                _attach_gpa_to_courses(results, gpa_api_key, DEFAULT_VERIFY_SSL)
+            return results
         except requests.RequestException as exc:
             raise HTTPException(status_code=502, detail=f"課程查詢系統請求失敗：{exc}") from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return router
+
+
+def _attach_gpa_to_courses(courses: list[CourseSearchResult], api_key: str, verify_ssl: bool) -> None:
+    for course in courses:
+        if not course.course_no:
+            continue
+        course.gpa, course.gpa_status = fetch_course_gpa(course.course_no, api_key, verify_ssl)
 
 
 def _as_int(value: Any) -> int | None:

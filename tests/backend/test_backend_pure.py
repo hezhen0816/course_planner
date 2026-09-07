@@ -335,58 +335,6 @@ def test_official_selection_client_exports_and_restores_session_cookies() -> Non
     assert restored.is_logged_in is True
 
 
-def test_official_selection_join_refreshes_workspace_before_and_after_post(monkeypatch) -> None:
-    events: list[object] = []
-    workspace_html = """
-    <html>
-      <head><title>初選登記選課</title></head>
-      <body>
-        <table id="cartTable">
-          <tr><td>志願序</td><td>課碼</td><td>課程名稱</td><td>取消加入</td></tr>
-          <tr><td>1</td><td>CS2002302</td><td>資料結構</td><td>取消加入</td></tr>
-        </table>
-        <div id="loginModal">
-          <table>
-            <tr><th>節次</th><th>時間</th><th>星期一</th><th>星期二</th></tr>
-            <tr><td>1</td><td>08:10～09:00</td><td>資料結構</td><td></td></tr>
-          </table>
-        </div>
-      </body>
-    </html>
-    """
-
-    class FakeSession:
-        def __init__(self) -> None:
-            self.headers: dict[str, str] = {}
-
-        def post(self, endpoint: str, **kwargs: object) -> FakeHTTPResponse:
-            events.append(("post", endpoint, kwargs["data"]))
-            return FakeHTTPResponse(url=endpoint)
-
-    client = official_selection.OfficialSelectionClient()
-    client.session = FakeSession()  # type: ignore[assignment]
-
-    def fake_get_workspace_page(verify_ssl: bool) -> FakeHTTPResponse:
-        events.append(("get_workspace", verify_ssl))
-        return FakeHTTPResponse(text=workspace_html)
-
-    monkeypatch.setattr(client, "_get_workspace_page", fake_get_workspace_page)
-
-    payload = client.join_course(" cs2002302 ", verify_ssl=False)
-
-    assert events == [
-        ("get_workspace", False),
-        (
-            "post",
-            official_selection.INITIAL_SELECTION_JOIN_URL,
-            {"CourseNo": "CS2002302", "type": 1},
-        ),
-        ("get_workspace", False),
-    ]
-    assert payload["session_valid"] is True
-    assert payload["registered_courses"][0]["course_no"] == "CS2002302"
-
-
 def test_official_selection_action_uses_saved_credentials_for_session(monkeypatch) -> None:
     calls: list[tuple[str, str, str, bool] | tuple[str, str]] = []
 

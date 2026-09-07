@@ -8,28 +8,10 @@ import type {
   SchoolCredentials,
 } from './types';
 
-// Only fall back to a local backend while developing; a deployed site with no
-// VITE_BACKEND_URL has no backend at all and should say so instead of probing
-// localhost from the viewer's machine.
-const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, '');
-
-export const BACKEND_UNAVAILABLE_MESSAGE =
-  '此站台未連接校務同步後端，無法同步課表或官方選課。請改用手機 App，或在 tailnet 內以本機執行 Web（VITE_BACKEND_URL）。';
-
-export function isBackendConfigured(): boolean {
-  return API_BASE_URL.length > 0;
-}
+const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!isBackendConfigured()) {
-    throw new Error(BACKEND_UNAVAILABLE_MESSAGE);
-  }
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, init);
-  } catch {
-    throw new Error(`無法連線到校務同步後端（${API_BASE_URL}）。請確認後端已啟動，且此裝置在同一個 tailnet 內。`);
-  }
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
   if (!response.ok) {
     let message = `API 請求失敗 (${response.status})`;
     try {
@@ -62,9 +44,16 @@ export function fetchCourseSemesters(): Promise<CourseSemesterInfo[]> {
   return apiRequest<CourseSemesterInfo[]>('/api/courses/semesters');
 }
 
-export function searchCourses(semester: string, query: string, mode: 'name' | 'code'): Promise<CourseSearchResult[]> {
+export function searchCourses(
+  semester: string,
+  query: string,
+  mode: 'name' | 'code',
+  gpaApiKey?: string,
+): Promise<CourseSearchResult[]> {
   const params = new URLSearchParams({ semester, q: query, mode });
-  return apiRequest<CourseSearchResult[]>(`/api/courses/search?${params.toString()}`);
+  return apiRequest<CourseSearchResult[]>(`/api/courses/search?${params.toString()}`, {
+    headers: gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : undefined,
+  });
 }
 
 export function importRequirementsPdf(file: File): Promise<RequirementPdfImportResponse> {
@@ -144,10 +133,14 @@ export function syncOfficialInitialSelection(
   username: string,
   password: string,
   accessToken?: string,
+  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/sync', {
     method: 'POST',
-    headers: jsonHeaders(accessToken),
+    headers: {
+      ...jsonHeaders(accessToken),
+      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
+    },
     body: JSON.stringify({
       username,
       ...(password ? { password } : {}),
@@ -176,10 +169,14 @@ export function joinOfficialInitialSelectionCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
+  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/join', {
     method: 'POST',
-    headers: jsonHeaders(accessToken),
+    headers: {
+      ...jsonHeaders(accessToken),
+      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
+    },
     body: JSON.stringify({
       username,
       course_no: courseNo,
@@ -194,10 +191,14 @@ export function addOfficialInitialSelectionWaitlistCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
+  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/add-to-waitlist', {
     method: 'POST',
-    headers: jsonHeaders(accessToken),
+    headers: {
+      ...jsonHeaders(accessToken),
+      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
+    },
     body: JSON.stringify({
       username,
       course_no: courseNo,
@@ -212,10 +213,14 @@ export function removeOfficialInitialSelectionCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
+  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/remove', {
     method: 'POST',
-    headers: jsonHeaders(accessToken),
+    headers: {
+      ...jsonHeaders(accessToken),
+      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
+    },
     body: JSON.stringify({
       username,
       course_no: courseNo,
@@ -230,10 +235,14 @@ export function reorderOfficialInitialSelectionCourses(
   username: string,
   orderedCourseNos: string[],
   accessToken?: string,
+  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/reorder', {
     method: 'POST',
-    headers: jsonHeaders(accessToken),
+    headers: {
+      ...jsonHeaders(accessToken),
+      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
+    },
     body: JSON.stringify({
       username,
       ordered_course_nos: orderedCourseNos,

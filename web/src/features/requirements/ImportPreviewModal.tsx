@@ -1,4 +1,4 @@
-import { type ApiImportPreview, formatCredits } from '../../domain/planner';
+import { type ApiImportPreview, formatCredits } from '../../shared/domain/planner';
 
 export function ImportPreviewModal({
   preview,

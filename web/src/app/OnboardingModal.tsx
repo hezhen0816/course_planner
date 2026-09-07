@@ -19,20 +19,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
       color: "bg-blue-50"
     },
     {
-      title: "同步校務資料",
-      description: "到「設定 → 資料同步」更新校務課表與歷年成績，再到「修課軌跡」查看紀錄。",
+      title: "快速匯入課程",
+      description: "使用「匯入成績」功能，上傳從學校系統下載的 HTML 檔案，工具會自動解析並填入你已修習的課程。",
       icon: <Upload className="w-16 h-16 text-green-500" />,
       color: "bg-green-50"
     },
     {
       title: "靈活管理課程",
-      description: "先在「課程查詢」比較開課資訊，再到「選課工作台」核對課表與志願。送出官方操作前會請你確認。",
+      description: "你可以手動新增、編輯、刪除課程，調整課程類別與學分，讓規劃更符合自己的需求。",
       icon: <Calculator className="w-16 h-16 text-purple-500" />,
       color: "bg-purple-50"
     },
     {
       title: "畢業門檻追蹤",
-      description: "「畢業進度」依已匯入紀錄呈現學分缺口；各類門檻可在「設定」調整。",
+      description: "側邊欄會即時顯示你的學分統計與各項畢業門檻進度，幫助你掌握修課狀況。",
       icon: <div className="text-5xl font-bold text-orange-500">133</div>,
       color: "bg-orange-50"
     }
@@ -54,11 +54,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
         
         <button 
           onClick={onClose}
-          aria-label="關閉功能導覽"
           className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors z-10"
         >
           <X className="w-5 h-5" />
@@ -70,7 +69,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             {steps[currentStep].icon}
           </div>
           
-          <h2 className="text-2xl font-semibold text-slate-900 mb-3">
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">
             {steps[currentStep].title}
           </h2>
           

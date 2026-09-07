@@ -1,6 +1,7 @@
 import type {
   AcademicHistoryRecord,
   AppData,
+  AppSettings,
   Course,
   CourseCategory,
   CourseProgram,
@@ -15,6 +16,7 @@ import type {
   SyncedCourseRow,
 } from '../types';
 import { searchCourses } from '../api';
+import { parseCourseDepartment } from './courseDepartments';
 
 export const DAY_COLUMNS = [
   { code: 'M', label: '一' },
@@ -29,6 +31,8 @@ export const DAY_COLUMNS = [
 export const PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'A', 'B', 'C', 'D'];
 export const MANUAL_SET_ID = 'manual-requirements';
 export const RETAKE_SET_ID = 'retake-requirements';
+export const DOUBLE_MAJOR_RECOGNITION_SET_ID = 'manual-double-major-recognition';
+export const MINOR_RECOGNITION_SET_ID = 'manual-minor-recognition';
 export const HISTORY_IMPORT_NOTE_MARKER = '已修紀錄匯入';
 let generatedIdCounter = 0;
 
@@ -71,33 +75,8 @@ export function parseNodeSlots(node: string): string[] {
     .filter(Boolean);
 }
 
-const DAY_LABEL_BY_CODE: Record<string, string> = Object.fromEntries(DAY_COLUMNS.map((day) => [day.code, day.label]));
-
-/**
- * Render slots grouped by weekday with the Chinese day annotated once, e.g.
- * ["M6","M7","M8"] -> "M（一）6, 7, 8" and ["W8","R3","R4"] -> "W（三）8、R（四）3, 4".
- * Unknown day codes fall back to the raw slot text.
- */
 export function displaySlots(slots: string[]): string {
-  if (slots.length === 0) return '未提供節次';
-  const groups: { day: string; periods: string[] }[] = [];
-  slots.forEach((slot) => {
-    const match = slot.trim().toUpperCase().match(/^([A-Z])(\d{1,2}|[A-D])$/);
-    if (!match || !DAY_LABEL_BY_CODE[match[1]]) {
-      groups.push({ day: '', periods: [slot] });
-      return;
-    }
-    const [, day, period] = match;
-    const last = groups[groups.length - 1];
-    if (last && last.day === day) {
-      last.periods.push(period);
-    } else {
-      groups.push({ day, periods: [period] });
-    }
-  });
-  return groups
-    .map((group) => (group.day ? `${group.day}（${DAY_LABEL_BY_CODE[group.day]}）${group.periods.join(', ')}` : group.periods.join(', ')))
-    .join('、');
+  return slots.length > 0 ? slots.join(', ') : '未提供節次';
 }
 
 export function displayClassroom(classroom: string | null | undefined): string {
@@ -154,6 +133,31 @@ export function inferCourseCategory(offering: CourseSearchResult): CourseCategor
   return 'unclassified';
 }
 
+export function programFromOfferingSettings(
+  offering: Pick<CourseSearchResult, 'course_no'>,
+  settings?: AppSettings,
+): CourseProgram {
+  const departmentCode = parseCourseDepartment(offering.course_no)?.code;
+  const programDepartments = settings?.programDepartments;
+  if (departmentCode && departmentCode === programDepartments?.doubleMajorDepartmentCode) return 'double_major';
+  if (departmentCode && departmentCode === programDepartments?.minorDepartmentCode) return 'minor';
+  if (departmentCode && departmentCode === programDepartments?.homeDepartmentCode) return 'home';
+  return 'other';
+}
+
+export function categoryFromOfferingForProgram(
+  offering: CourseSearchResult,
+  program: CourseProgram,
+): CourseCategory {
+  const inferred = inferCourseCategory(offering);
+  if (program === 'double_major' || program === 'minor' || program === 'home') {
+    const requireOption = offering.require_option.trim().toUpperCase();
+    if (requireOption === 'R' || requireOption.includes('必')) return 'compulsory';
+    if (requireOption === 'E' || requireOption.includes('選')) return 'elective';
+  }
+  return inferred;
+}
+
 export function toScheduledOffering(offering: CourseSearchResult): ScheduledOffering {
   return {
     semester: offering.semester,
@@ -166,6 +170,10 @@ export function toScheduledOffering(offering: CourseSearchResult): ScheduledOffe
     slots: parseNodeSlots(offering.node),
     requireOption: offering.require_option,
     contents: offering.contents,
+    gpa: offering.gpa,
+    gpaStatus: offering.gpa_status,
+    selectedCount: offering.selected_count,
+    capacity: offering.capacity,
   };
 }
 
@@ -180,7 +188,7 @@ export function courseFromOffering(
     id: `${offering.course_no || offering.course_name}-${nextPlannerId()}`,
     name: offering.course_name,
     credits,
-    category: inferCourseCategory(offering),
+    category: categoryFromOfferingForProgram(offering, program),
     program,
     dimension: offering.dimension ? 'None' : undefined,
     sourceRequirementId: requirement?.id,
@@ -232,49 +240,6 @@ export function uniqueTextValues(values: Array<string | null | undefined>): stri
     normalized.push(text);
   });
   return normalized;
-}
-
-const OFFICIAL_SCHEDULE_WEEKDAYS = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-const OFFICIAL_SCHEDULE_PERIOD_TIMES: Record<string, string> = {
-  '1': '08:10～09:00',
-  '2': '9:10～10:00',
-  '3': '10:20～11:10',
-  '4': '11:20～12:10',
-  '5': '12:20～13:10',
-  '6': '13:20～14:10',
-  '7': '14:20～15:10',
-  '8': '15:30～16:20',
-  '9': '16:30～17:20',
-  '10': '17:30～18:20',
-  A: '18:25～19:15',
-  B: '19:20～20:10',
-  C: '20:15～21:05',
-  D: '21:10～22:00',
-};
-
-/**
- * Build the official-timetable grid rows (節次/時間/星期一…星期日) from a schedule
- * sync. Mirrors backend `_schedule_rows_from_slots` so a plain schedule sync can
- * refresh the workbench grid without a separate official-selection sync.
- */
-export function officialScheduleRowsFromSlots(slots: ScheduleSyncResponse['slots']): Record<string, string>[] {
-  const rows = PERIODS.map((period) => {
-    const row: Record<string, string> = { 節次: period, 時間: OFFICIAL_SCHEDULE_PERIOD_TIMES[period] || '' };
-    OFFICIAL_SCHEDULE_WEEKDAYS.forEach((weekday) => {
-      row[weekday] = '';
-    });
-    return row;
-  });
-  const rowByPeriod = new Map(rows.map((row) => [row.節次, row]));
-  slots.forEach((slot) => {
-    const period = slot.period.trim().toUpperCase();
-    const weekday = slot.weekday_label.trim();
-    const courseName = slot.course_name.trim();
-    const row = rowByPeriod.get(period);
-    if (!row || !OFFICIAL_SCHEDULE_WEEKDAYS.includes(weekday) || !courseName) return;
-    row[weekday] = [row[weekday], courseName].filter(Boolean).join('、');
-  });
-  return rows;
 }
 
 export function coursesFromScheduleSync(payload: ScheduleSyncResponse): Course[] {
@@ -672,7 +637,10 @@ export function normalizeName(value: string): string {
 }
 
 export function getRequirementStatus(requirement: PendingRequirement, data: AppData): RequirementStatus {
-  const scheduledCourses = data.semesters.flatMap((semester) => semester.courses);
+  const scheduledCourses = [
+    ...data.semesters.flatMap((semester) => semester.courses),
+    ...(data.selectionPlan?.courses || []),
+  ];
   const targetCredits = requirement.requiredCredits ?? requirement.credits ?? 0;
   const candidateNames = new Set(requirement.courseNames.map(normalizeName));
   const candidateCodePrefix = requirement.courseCodePrefix?.trim().toUpperCase() || '';

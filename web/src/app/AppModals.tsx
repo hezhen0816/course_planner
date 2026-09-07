@@ -1,6 +1,6 @@
-import type { AppData, Course, CourseSearchResult, PendingRequirement } from '../types';
-import type { ApiImportPreview, PlanningMode } from '../domain/planner';
-import { CourseDetailModal } from './CourseDetailModal';
+import type { AppData, Course, CourseSearchResult, PendingRequirement } from '../shared/types';
+import type { ApiImportPreview, PlanningMode } from '../shared/domain/planner';
+import { CourseDetailModal } from '../features/history/CourseDetailModal';
 import { OnboardingModal } from './OnboardingModal';
 import { OfferingModal } from '../features/planning/OfferingModal';
 import { ImportPreviewModal } from '../features/requirements/ImportPreviewModal';
@@ -18,7 +18,6 @@ type AppModalsProps = {
   importPreview: ApiImportPreview | null;
   isSchoolSyncOpen: boolean;
   schoolSyncMode: 'school-data' | 'official-selection';
-  onSchoolSyncModeChange: (mode: 'school-data' | 'official-selection') => void;
   schoolUsername: string;
   schoolPassword: string;
   rememberSchoolCredentials: boolean;
@@ -52,7 +51,6 @@ export function AppModals({
   importPreview,
   isSchoolSyncOpen,
   schoolSyncMode,
-  onSchoolSyncModeChange,
   schoolUsername,
   schoolPassword,
   rememberSchoolCredentials,
@@ -97,7 +95,6 @@ export function AppModals({
       {isSchoolSyncOpen && (
         <SchoolScheduleSyncModal
           mode={schoolSyncMode}
-          onModeChange={onSchoolSyncModeChange}
           username={schoolUsername}
           password={schoolPassword}
           rememberCredentials={rememberSchoolCredentials}
@@ -117,6 +114,7 @@ export function AppModals({
           course={detailCourse.course}
           semesterId={detailCourse.semesterId}
           semesterName={detailCourse.semesterName}
+          recognitionRequirements={data.pendingRequirements}
           onClose={onCloseCourseDetail}
           onSave={onSaveCourseDetail}
         />

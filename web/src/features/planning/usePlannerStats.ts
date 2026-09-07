@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import type { AppData, PlannerStats } from '../../types';
+import type { AppData, PlannerStats } from '../../shared/types';
 import {
   categoryFromHistoryRecord,
   isFailedImportedHistoryCourse,
   normalizeName,
-} from '../../domain/planner';
+} from '../../shared/domain/planner';
 
 export function usePlannerStats(data: AppData): PlannerStats {
   return useMemo<PlannerStats>(() => {
@@ -47,7 +47,14 @@ export function usePlannerStats(data: AppData): PlannerStats {
       if (category === 'elective') current.homeElective += credits;
     });
 
-    data.semesters.forEach((semester) => {
+    const semesterLikeSources = [
+      ...data.semesters,
+      ...(data.selectionPlan?.courses.length
+        ? [{ id: '__selection_plan__', name: data.selectionPlan.targetLabel || '未來規劃', courses: data.selectionPlan.courses }]
+        : []),
+    ];
+
+    semesterLikeSources.forEach((semester) => {
       let hasPE = false;
       semester.courses.forEach((course) => {
         if (isFailedImportedHistoryCourse(course)) return;

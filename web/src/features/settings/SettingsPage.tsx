@@ -1,21 +1,29 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { KeyRound, RefreshCw, Settings } from 'lucide-react';
-import type { AppData, OfficialSelectionSyncResponse, SchoolSyncStatus } from '../../types';
+import { useEffect, useState } from 'react';
+import { KeyRound, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
+import type { AppData, GpaApiSettings, ProgramDepartmentSettings } from '../../shared/types';
+import { listCourseDepartments } from '../../shared/domain/courseDepartments';
 
-type SyncActivity = 'idle' | 'loading' | 'error' | 'success';
+const EMPTY_GPA_API_SETTINGS: GpaApiSettings = {
+  enabled: false,
+  apiKey: '',
+};
+const EMPTY_PROGRAM_DEPARTMENT_SETTINGS: ProgramDepartmentSettings = {};
+const COURSE_DEPARTMENTS = listCourseDepartments();
 
 type SettingsPageProps = {
   initialSettings: AppData['targets'];
   schoolUsername: string;
   selectionTargetLabel: string;
   hasSavedSchoolCredentials: boolean;
-  syncStatus: SyncActivity;
+  syncStatus: 'idle' | 'loading' | 'error' | 'success';
   syncMessage: string;
-  schoolSync?: SchoolSyncStatus;
-  officialSelection: OfficialSelectionSyncResponse | null;
-  officialSelectionStatus: SyncActivity;
+  officialSelectionStatus: 'idle' | 'loading' | 'error' | 'success';
   officialSelectionMessage: string;
+  initialGpaApiSettings?: GpaApiSettings;
+  initialProgramDepartmentSettings?: ProgramDepartmentSettings;
   onSaveTargets: (targets: AppData['targets']) => void;
+  onSaveGpaApiSettings: (settings: GpaApiSettings) => void;
+  onSaveProgramDepartmentSettings: (settings: ProgramDepartmentSettings) => void;
   onOpenSchoolSync: () => void;
   onOpenOfficialSelectionSync: () => void;
   onClearSavedSchoolCredentials: () => void;
@@ -28,81 +36,173 @@ export function SettingsPage({
   hasSavedSchoolCredentials,
   syncStatus,
   syncMessage,
-  schoolSync,
-  officialSelection,
   officialSelectionStatus,
   officialSelectionMessage,
+  initialGpaApiSettings,
+  initialProgramDepartmentSettings,
   onSaveTargets,
+  onSaveGpaApiSettings,
+  onSaveProgramDepartmentSettings,
   onOpenSchoolSync,
   onOpenOfficialSelectionSync,
   onClearSavedSchoolCredentials,
 }: SettingsPageProps) {
-  const [section, setSection] = useState('thresholds');
   const [settingsForm, setSettingsForm] = useState(initialSettings);
-  const isDirty = JSON.stringify(settingsForm) !== JSON.stringify(initialSettings);
+  const [gpaApiForm, setGpaApiForm] = useState<GpaApiSettings>({
+    ...EMPTY_GPA_API_SETTINGS,
+    ...initialGpaApiSettings,
+  });
+  const [programDepartmentForm, setProgramDepartmentForm] = useState<ProgramDepartmentSettings>({
+    ...EMPTY_PROGRAM_DEPARTMENT_SETTINGS,
+    ...initialProgramDepartmentSettings,
+  });
+  const [programDepartmentSaved, setProgramDepartmentSaved] = useState(false);
 
   useEffect(() => {
     setSettingsForm(initialSettings);
   }, [initialSettings]);
 
-  const updateField = (key: keyof AppData['targets']) => (value: number) => {
-    setSettingsForm((current) => ({ ...current, [key]: value }));
-  };
+  useEffect(() => {
+    setGpaApiForm({
+      ...EMPTY_GPA_API_SETTINGS,
+      ...initialGpaApiSettings,
+    });
+  }, [initialGpaApiSettings]);
+
+  useEffect(() => {
+    setProgramDepartmentForm({
+      ...EMPTY_PROGRAM_DEPARTMENT_SETTINGS,
+      ...initialProgramDepartmentSettings,
+    });
+  }, [initialProgramDepartmentSettings]);
+
+  useEffect(() => {
+    if (!programDepartmentSaved) return;
+    const timer = window.setTimeout(() => setProgramDepartmentSaved(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [programDepartmentSaved]);
 
   return (
-    <div className="settings-layout mx-auto max-w-6xl">
-      <header className="page-heading"><p className="eyebrow">個人設定</p><h1>讓規劃符合你的目標</h1><p>管理畢業門檻、校務帳號與資料同步。</p></header>
-      <div className="settings-tabs" role="group" aria-label="設定分類">
-        {[['thresholds', '畢業門檻'], ['sync', '資料同步'], ['account', '校務帳號']].map(([value, label]) => <button key={value} type="button" aria-pressed={section === value} onClick={() => setSection(value)}>{label}</button>)}
-      </div>
-      <section hidden={section !== 'sync'} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="space-y-4">
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">設定</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950">校務資料同步</h2>
-            <p className="mt-1 text-sm text-slate-500">查看各來源的更新時間，依需要重新同步。</p>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-950">資料同步與畢業門檻</h1>
+            <p className="mt-1 text-sm text-slate-500">校務資料同步、畢業門檻數字與帳號層級設定集中放在這裡，不混進選課流程。</p>
           </div>
-          <button
-            onClick={onOpenSchoolSync}
-            disabled={syncStatus === 'loading' || officialSelectionStatus === 'loading'}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncStatus === 'loading' || officialSelectionStatus === 'loading' ? 'animate-spin' : ''}`} />
-            同步校務資料
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={onOpenSchoolSync}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <RefreshCw className="h-4 w-4" />
+              同步校務資料
+            </button>
+            <button
+              onClick={onOpenOfficialSelectionSync}
+              disabled={officialSelectionStatus === 'loading'}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw className={`h-4 w-4 ${officialSelectionStatus === 'loading' ? 'animate-spin' : ''}`} />
+              同步官方選課狀態
+            </button>
+          </div>
         </div>
-
-        {/* Per-source status rows with timestamps replace the free-text banners,
-            so "did this actually sync, and when?" is answered at a glance. */}
-        <div className="mt-4 divide-y divide-slate-100 rounded-md border border-slate-200">
-          <SyncStatusRow
-            title="課表與成績"
-            activity={syncStatus}
-            message={syncMessage}
-            summary={scheduleSummary(schoolSync)}
-            onSync={onOpenSchoolSync}
-          />
-          <SyncStatusRow
-            title="官方初選"
-            activity={officialSelectionStatus}
-            message={officialSelectionMessage}
-            summary={officialSelectionSummary(officialSelection)}
-            onSync={onOpenOfficialSelectionSync}
-          />
-        </div>
+        {syncMessage && (
+          <p className={`mt-4 rounded-md px-3 py-2 text-sm ${
+            syncStatus === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+          }`}>
+            {syncMessage}
+          </p>
+        )}
+        {officialSelectionMessage && (
+          <p className={`mt-3 rounded-md px-3 py-2 text-sm ${
+            officialSelectionStatus === 'error' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'
+          }`}>
+            官方選課狀態：{officialSelectionMessage}
+          </p>
+        )}
       </section>
 
-      <section hidden={section !== 'account'} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
+          <Settings className="h-4 w-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-900">雙主修與輔系系所</h2>
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSaveProgramDepartmentSettings({
+              homeDepartmentCode: programDepartmentForm.homeDepartmentCode || undefined,
+              doubleMajorDepartmentCode: programDepartmentForm.doubleMajorDepartmentCode || undefined,
+              minorDepartmentCode: programDepartmentForm.minorDepartmentCode || undefined,
+            });
+            setProgramDepartmentSaved(true);
+          }}
+          className="space-y-4 p-5"
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <DepartmentField
+              label="本系系所"
+              value={programDepartmentForm.homeDepartmentCode || ''}
+              onChange={(value) => setProgramDepartmentForm({
+                ...programDepartmentForm,
+                homeDepartmentCode: value || undefined,
+              })}
+            />
+            <DepartmentField
+              label="雙主修系所"
+              value={programDepartmentForm.doubleMajorDepartmentCode || ''}
+              onChange={(value) => setProgramDepartmentForm({
+                ...programDepartmentForm,
+                doubleMajorDepartmentCode: value || undefined,
+              })}
+            />
+            <DepartmentField
+              label="輔系系所"
+              value={programDepartmentForm.minorDepartmentCode || ''}
+              onChange={(value) => setProgramDepartmentForm({
+                ...programDepartmentForm,
+                minorDepartmentCode: value || undefined,
+              })}
+            />
+          </div>
+          <p className="text-sm text-slate-500">
+            選課工作台會依課碼前兩碼比對這裡設定的系所，改變課程顏色標示。
+          </p>
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className={`text-sm font-medium ${programDepartmentSaved ? 'text-emerald-700' : 'text-slate-400'}`}>
+              {programDepartmentSaved ? '系所設定已更新，將自動同步到資料庫。' : '儲存後會套用到選課工作台顏色。'}
+            </p>
+            <button
+              type="submit"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              儲存系所設定
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">校務帳號與選課目標</h2>
+              <h2 className="text-base font-semibold text-slate-900">校務帳號與選課目標</h2>
             </div>
             <p className="mt-2 text-sm text-slate-500">
               校務帳號用來同步官方選課清單與歷年成績，並可由學號推定目前選課對應的大幾學期。
             </p>
           </div>
+          <button
+            onClick={onOpenSchoolSync}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            設定 / 同步校務帳號
+          </button>
         </div>
         <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
           <InfoRow label="目前學號" value={schoolUsername.trim() || '尚未設定'} />
@@ -114,7 +214,7 @@ export function SettingsPage({
               </p>
               <p className="mt-1 text-xs text-blue-700">
                 {hasSavedSchoolCredentials
-                  ? '官方 session 過期時，可直接重新同步官方初選，不必再輸入密碼。'
+                  ? '官方 session 過期時，可直接重新同步官方選課狀態，不必再輸入密碼。'
                   : '請在同步視窗勾選保存並成功同步一次，之後官方 session 過期才可直接重新同步。'}
               </p>
             </div>
@@ -130,137 +230,157 @@ export function SettingsPage({
         </div>
       </section>
 
-      <section hidden={section !== 'thresholds'} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-blue-600" />
+              <h2 className="text-base font-semibold text-slate-900">GPA API 密鑰</h2>
+            </div>
+            <p className="mt-2 text-sm text-slate-500">
+              預留 GPA API 串接設定；目前只保存設定，不會自動向第三方 GPA API 發送請求。
+            </p>
+          </div>
+          <span className={`w-fit rounded-full px-2 py-1 text-xs font-medium ${
+            gpaApiForm.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {gpaApiForm.enabled ? '已啟用' : '未啟用'}
+          </span>
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSaveGpaApiSettings({
+              enabled: gpaApiForm.enabled,
+              apiKey: gpaApiForm.apiKey.trim(),
+              updatedAt: new Date().toISOString(),
+            });
+          }}
+          className="space-y-4 p-5"
+        >
+          <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+            <input
+              type="checkbox"
+              checked={gpaApiForm.enabled}
+              onChange={(event) => setGpaApiForm({ ...gpaApiForm, enabled: event.target.checked })}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-800">啟用 GPA API 串接</span>
+              <span className="mt-1 block text-xs text-slate-500">啟用後，未來 GPA 匯入流程會讀取這組 API 設定。</span>
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <TextField
+              label="API 密鑰"
+              value={gpaApiForm.apiKey}
+              onChange={(value) => setGpaApiForm({ ...gpaApiForm, apiKey: value })}
+              placeholder="貼上 GPA API token"
+              type="password"
+              wide
+            />
+          </div>
+
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            GPA API 密鑰屬於敏感資料；正式串接前建議改由後端加密保存，避免把密鑰暴露在前端或一般資料欄位。
+          </div>
+
+          <div className="flex justify-end border-t border-slate-100 pt-4">
+            <button
+              type="submit"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              儲存 GPA API 設定
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
+          <Settings className="h-4 w-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-900">設定畢業門檻</h2>
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             onSaveTargets(settingsForm);
           }}
+          className="space-y-5 p-5"
         >
-          <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">設定畢業門檻</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                aria-live="polite"
-                className={`text-xs ${isDirty ? 'font-medium text-amber-700' : 'text-slate-400'}`}
-              >
-                {isDirty ? '有未儲存的變更' : '已儲存'}
-              </span>
-              <button
-                type="submit"
-                disabled={!isDirty}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-              >
-                儲存設定
-              </button>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NumberField
+              label="畢業總學分"
+              value={settingsForm.total}
+              onChange={(value) => setSettingsForm({ ...settingsForm, total: value })}
+              wide
+            />
+            <NumberField
+              label="必修國文"
+              value={settingsForm.chinese}
+              onChange={(value) => setSettingsForm({ ...settingsForm, chinese: value })}
+            />
+            <NumberField
+              label="共同必修英文"
+              value={settingsForm.english}
+              onChange={(value) => setSettingsForm({ ...settingsForm, english: value })}
+            />
+            <NumberField
+              label="通識學分"
+              value={settingsForm.gen_ed}
+              onChange={(value) => setSettingsForm({ ...settingsForm, gen_ed: value })}
+            />
+            <NumberField
+              label="社會實踐"
+              value={settingsForm.social}
+              onChange={(value) => setSettingsForm({ ...settingsForm, social: value })}
+            />
+            <NumberField
+              label="體育（學期數）"
+              value={settingsForm.pe_semesters}
+              onChange={(value) => setSettingsForm({ ...settingsForm, pe_semesters: value })}
+              wide
+            />
+          </div>
+
+          <div className="border-t border-slate-100 pt-5">
+            <h3 className="mb-3 text-sm font-semibold text-slate-700">系所課程門檻</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <NumberField
+                label="本系必修"
+                value={settingsForm.home_compulsory}
+                onChange={(value) => setSettingsForm({ ...settingsForm, home_compulsory: value })}
+              />
+              <NumberField
+                label="本系選修"
+                value={settingsForm.home_elective}
+                onChange={(value) => setSettingsForm({ ...settingsForm, home_elective: value })}
+              />
+              <NumberField
+                label="雙主修"
+                value={settingsForm.double_major}
+                onChange={(value) => setSettingsForm({ ...settingsForm, double_major: value })}
+              />
+              <NumberField
+                label="輔修"
+                value={settingsForm.minor}
+                onChange={(value) => setSettingsForm({ ...settingsForm, minor: value })}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 divide-y divide-slate-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-            <ThresholdGroup title="共同畢業門檻" hint="全校共同規定的學分與學期數">
-              <NumberField label="畢業總學分" unit="學分" value={settingsForm.total} onChange={updateField('total')} emphasis />
-              <NumberField label="必修國文" unit="學分" value={settingsForm.chinese} onChange={updateField('chinese')} />
-              <NumberField label="共同必修英文" unit="學分" value={settingsForm.english} onChange={updateField('english')} />
-              <NumberField label="通識學分" unit="學分" value={settingsForm.gen_ed} onChange={updateField('gen_ed')} />
-              <NumberField label="社會實踐" unit="學分" value={settingsForm.social} onChange={updateField('social')} />
-              <NumberField label="體育" unit="學期" value={settingsForm.pe_semesters} onChange={updateField('pe_semesters')} />
-            </ThresholdGroup>
-            <ThresholdGroup title="系所課程門檻" hint="依系所規定填寫，0 表示不適用">
-              <NumberField label="本系必修" unit="學分" value={settingsForm.home_compulsory} onChange={updateField('home_compulsory')} emphasis />
-              <NumberField label="本系選修" unit="學分" value={settingsForm.home_elective} onChange={updateField('home_elective')} />
-              <NumberField label="雙主修" unit="學分" value={settingsForm.double_major} onChange={updateField('double_major')} />
-              <NumberField label="輔修" unit="學分" value={settingsForm.minor} onChange={updateField('minor')} />
-            </ThresholdGroup>
+          <div className="flex justify-end border-t border-slate-100 pt-5">
+            <button
+              type="submit"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              儲存設定
+            </button>
           </div>
         </form>
       </section>
     </div>
-  );
-}
-
-type SyncSummary = { state: 'never' | 'fresh' | 'stale'; label: string; detail?: string };
-
-function formatSyncStamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
-}
-
-function scheduleSummary(schoolSync?: SchoolSyncStatus): SyncSummary {
-  if (!schoolSync?.scheduleSyncedAt) return { state: 'never', label: '尚未同步' };
-  const parts = [`${schoolSync.scheduleCourseCount ?? 0} 門課`];
-  if (schoolSync.historyImportedAt) parts.push(`歷年紀錄 ${schoolSync.historyRecordCount ?? 0} 筆`);
-  return { state: 'fresh', label: `上次同步 ${formatSyncStamp(schoolSync.scheduleSyncedAt)}`, detail: parts.join(' · ') };
-}
-
-function officialSelectionSummary(selection: OfficialSelectionSyncResponse | null): SyncSummary {
-  if (!selection) return { state: 'never', label: '尚未同步' };
-  const detail = `已登記 ${selection.registered_count} 門 · 待加入 ${selection.available_count} 門`;
-  return selection.session_valid
-    ? { state: 'fresh', label: `上次同步 ${formatSyncStamp(selection.synced_at)} · session 有效`, detail }
-    : { state: 'stale', label: `快取 ${formatSyncStamp(selection.synced_at)} · session 已過期`, detail };
-}
-
-function SyncStatusRow({
-  title,
-  activity,
-  message,
-  summary,
-  onSync,
-}: {
-  title: string;
-  activity: SyncActivity;
-  message: string;
-  summary: SyncSummary;
-  onSync: () => void;
-}) {
-  const dotClass = activity === 'loading'
-    ? 'bg-blue-500 animate-pulse'
-    : activity === 'error'
-      ? 'bg-red-500'
-      : summary.state === 'fresh'
-        ? 'bg-emerald-500'
-        : summary.state === 'stale'
-          ? 'bg-amber-500'
-          : 'bg-slate-300';
-  return (
-    <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
-          <span className="text-sm font-semibold text-slate-900">{title}</span>
-          <span className={`text-xs ${summary.state === 'stale' ? 'text-amber-700' : 'text-slate-500'}`}>{summary.label}</span>
-        </div>
-        {summary.detail && <p className="mt-0.5 pl-4 text-xs text-slate-500">{summary.detail}</p>}
-        {message && (
-          <p className={`mt-1 pl-4 text-xs ${activity === 'error' ? 'text-red-700' : 'text-slate-600'}`}>{message}</p>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={onSync}
-        disabled={activity === 'loading'}
-        className="shrink-0 self-start text-sm font-medium text-blue-700 hover:underline disabled:cursor-not-allowed disabled:text-slate-400"
-      >
-        {activity === 'loading' ? '同步中…' : '同步'}
-      </button>
-    </div>
-  );
-}
-
-function ThresholdGroup({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
-  return (
-    <fieldset className="min-w-0 px-5 py-4">
-      <legend className="float-left mb-3 w-full">
-        <span className="block text-sm font-semibold text-slate-800">{title}</span>
-        <span className="mt-0.5 block text-xs text-slate-500">{hint}</span>
-      </legend>
-      {/* Cap row width so the value sits near its label instead of drifting to the far edge on wide screens. */}
-      <div className="clear-both w-full divide-y divide-slate-100">{children}</div>
-    </fieldset>
   );
 }
 
@@ -273,38 +393,84 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// A compact "label · value unit" row: the number is the subject, so the input
-// is only as wide as a 3-digit figure instead of stretching across the card.
-function NumberField({
+function TextField({
   label,
-  unit,
   value,
   onChange,
-  emphasis = false,
+  placeholder,
+  type = 'text',
+  wide = false,
 }: {
   label: string;
-  unit: string;
-  value: number;
-  onChange: (value: number) => void;
-  emphasis?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'password';
+  wide?: boolean;
 }) {
   return (
-    <label className="flex items-center justify-between gap-4 py-2">
-      <span className={`text-sm ${emphasis ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>{label}</span>
-      <span className="flex items-baseline gap-2">
-        <input
-          type="number"
-          inputMode="numeric"
-          min="0"
-          step="1"
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
-          className={`w-20 rounded-md border border-slate-300 px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-            emphasis ? 'font-semibold text-slate-900' : 'text-slate-800'
-          }`}
-        />
-        <span className="w-8 text-xs text-slate-500">{unit}</span>
-      </span>
+    <label className={wide ? 'md:col-span-2' : undefined}>
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      />
+    </label>
+  );
+}
+
+function DepartmentField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      >
+        <option value="">未設定</option>
+        {COURSE_DEPARTMENTS.map((department) => (
+          <option key={department.code} value={department.code}>
+            {department.code}・{department.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+  wide = false,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  wide?: boolean;
+}) {
+  return (
+    <label className={wide ? 'md:col-span-2' : undefined}>
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      <input
+        type="number"
+        min="0"
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      />
     </label>
   );
 }
