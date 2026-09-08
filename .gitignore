@@ -34,3 +34,7 @@ __pycache__/
 tests/fixtures/**/.venv/
 tests/fixtures/**/__pycache__/
 .vercel
+
+# Monitor worker local artifacts (may contain SSO responses / credentials)
+/debug_responses/
+/config/

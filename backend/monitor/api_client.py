@@ -57,7 +57,8 @@ class NTUSTCourseAPI:
         # 設置代理
         if proxies:
             self.session.proxies.update(proxies)
-            logger.info(f"已設置代理（通過參數）: {proxies}")
+            _, proxy_details = self._get_proxy_info_for_logging()
+            logger.info(f"已設置代理（通過參數）{proxy_details}")
         else:
             self._setup_proxy()
         
@@ -116,7 +117,8 @@ class NTUSTCourseAPI:
     def _log_proxy_status(self):
         """記錄當前代理配置狀態"""
         if self.session.proxies:
-            logger.info(f"當前 session 代理配置: {self.session.proxies}")
+            _, proxy_details = self._get_proxy_info_for_logging()
+            logger.info(f"當前 session 已配置代理{proxy_details}")
         else:
             logger.info("當前 session 未配置代理，將使用直接連接")
     

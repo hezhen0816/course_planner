@@ -21,6 +21,7 @@ from .monitor import CourseMonitor, _enroll_thread_local
 from .config import MonitorConfig, CourseConfig
 from .email_sender import EmailSender
 from .enrollment import EnrollmentClient
+from .api_client import NTUSTCourseAPI
 from .semester import get_default_semester
 from .utils import setup_logging
 from .crypto import CryptoManager
@@ -378,6 +379,23 @@ class SupabaseMonitor(CourseMonitor):
             logger.error(f"讀取設定失敗：{e}")
             return False
 
+    def _lookup_auth_email(self, user_id: Optional[str]) -> str:
+        """由 Supabase Auth 取得帳號信箱（快取於 user_email_map）。"""
+        if not user_id:
+            return ''
+        cached = self.user_email_map.get(user_id)
+        if cached:
+            return cached
+        try:
+            auth_resp = self.supabase.auth.admin.get_user_by_id(user_id)
+            email = (getattr(getattr(auth_resp, 'user', None), 'email', None) or '').strip()
+        except Exception as e:
+            logger.warning(f"取得使用者 Email 失敗（{user_id[:8]}）：{e}")
+            return ''
+        if email:
+            self.user_email_map[user_id] = email
+        return email
+
     def _process_test_email_requests(self) -> None:
         """處理待發送的測試信請求（email_test_requests 表）。"""
         try:
@@ -387,11 +405,12 @@ class SupabaseMonitor(CourseMonitor):
             for row in resp.data:
                 req_id = row['id']
                 user_id = row.get('user_id')
-                to_email = (row.get('email') or '').strip()
+                # 收件人一律以 Auth 帳號信箱為準；前端寫入的 email 欄位不可信（可被改成任意地址）
+                to_email = self._lookup_auth_email(user_id)
                 if not to_email:
                     self.supabase.table('email_test_requests').update({
                         'sent_at': datetime.now(timezone.utc).isoformat(),
-                        'error': 'email 為空'
+                        'error': '無法取得帳號信箱，請重新登入後再試'
                     }).eq('id', req_id).execute()
                     continue
                 smtp = self.user_smtp_map.get(user_id) if user_id else None
@@ -616,14 +635,21 @@ class SupabaseMonitor(CourseMonitor):
 
             logger.info(f"發現 {len(pending_resp.data)} 門待處理課程，正在查詢資訊...")
 
-            from src.api_client import NTUSTCourseAPI
-            api = NTUSTCourseAPI(verify_ssl=False)
+            # 依各使用者的 verify_ssl 設定建立查詢 client（不再寫死關閉 TLS 驗證）
+            verify_ssl_by_user = {
+                u.get('user_id'): bool(u.get('verify_ssl', True)) for u in self.users_data if u.get('user_id')
+            }
+            api_by_verify: Dict[bool, NTUSTCourseAPI] = {}
 
             for course_data in pending_resp.data:
                 course_code = course_data.get('course_code', '').strip()
                 if not course_code:
                     continue
                 try:
+                    verify_ssl = verify_ssl_by_user.get(course_data.get('user_id'), True)
+                    api = api_by_verify.get(verify_ssl)
+                    if api is None:
+                        api = api_by_verify[verify_ssl] = NTUSTCourseAPI(verify_ssl=verify_ssl)
                     c = api.get_course_by_code(course_code, semester=course_data.get('semester') or '', course_name=course_data.get('course_name') or '')
                     if c:
                         restrict1 = c.get('Restrict1', '')

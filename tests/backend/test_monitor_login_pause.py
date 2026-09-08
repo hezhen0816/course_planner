@@ -71,3 +71,26 @@ def test_set_login_pause_writes_settings_and_log(monkeypatch) -> None:
 
     monitor._set_login_pause("user-1", None, "")
     assert updates[1][1] == {"login_paused_until": None, "login_pause_reason": None}
+
+
+def test_lookup_auth_email_uses_auth_admin_and_caches(monkeypatch) -> None:
+    class _User:
+        email = " who@example.com "
+
+    class _Admin:
+        calls = 0
+
+        def get_user_by_id(self, uid):
+            _Admin.calls += 1
+            return type("Resp", (), {"user": _User()})()
+
+    class _Client:
+        auth = type("Auth", (), {"admin": _Admin()})()
+
+    monkeypatch.setattr(worker_mod, "create_client", lambda url, key: _Client())
+    monitor = worker_mod.SupabaseMonitor("http://supabase.local", "service-key")
+
+    assert monitor._lookup_auth_email("u1") == "who@example.com"
+    assert monitor._lookup_auth_email("u1") == "who@example.com"
+    assert _Admin.calls == 1
+    assert monitor._lookup_auth_email(None) == ""

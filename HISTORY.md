@@ -16,6 +16,13 @@
 
 ---
 
+## 2026-09-08 收掉 2026-09-06 審查的四項安全問題；順便查出待處理課程解析一直失敗
+
+- `api_client` 不再把整個 proxies dict（含代理密碼）寫進日誌，改用只含主機的 `get_proxy_info_for_logging`。
+- `worker.resolve_pending_courses` 原本 `from src.api_client import ...`（舊 repo 路徑，合併後不存在），整段一直丟 ImportError 被 except 吃掉，新課程只靠使用者迴圈的 `check_course` 補上狀態。改為套件內 import，並依各使用者 `verify_ssl` 設定建 client，不再寫死關閉 TLS 驗證。
+- 測試信收件人改由 `auth.admin.get_user_by_id` 取得，前端寫入的 `email_test_requests.email` 只用來滿足 NOT NULL，worker 不再讀它。
+- `.gitignore` 補根目錄 `/debug_responses/`、`/config/`（用根目錄限定，避免誤忽略其他 `config` 子目錄）。
+
 ## 2026-09-08 自動登入冷卻狀態持久化並顯示在儀表板
 
 做法：`EnrollmentClient` 冷卻觸發／解除時呼叫 `on_login_pause` 回呼，worker 把到期時間與最後錯誤寫進 `user_settings.login_paused_until/login_pause_reason` 並寫一筆 `warn` 日誌；worker 重啟時從同欄位還原冷卻（否則重啟等於清零，帳號鎖定保護失效）。儀表板在到期前顯示黃色橫幅，導引使用者先用瀏覽器登入選課系統確認。否決把狀態只寫進 `system_logs`：前端要從日誌反推「目前是否暫停」不可靠，也無法在重啟後還原。

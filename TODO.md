@@ -44,13 +44,6 @@
 - [ ] 日誌：`monitor/utils.setup_logging` 是唯一的集中設定，Compass 其他模組各自 `getLogger`；抽成 `backend/logging_setup.py`。
 - [ ] 時區：`monitor/monitor.py` 內嵌 `ZoneInfo('Asia/Taipei')`，改用 `backend/time_utils.now`。
 
-## P2 安全（2026-09-06 審查中尚未處理的項目）
-
-- [ ] `backend/monitor/api_client.py` 第 60、119 行把整個 proxies dict 寫進日誌，含代理密碼；改用 `get_proxy_info_for_logging`。
-- [ ] `backend/monitor/worker.py` 第 555 行解析待處理課程時 `NTUSTCourseAPI(verify_ssl=False)` 寫死關閉 TLS 驗證；改依使用者設定。
-- [ ] `email_test_requests.email` 由前端寫入、worker 照寄；worker 應改用 `auth.admin.get_user_by_id` 取得信箱。
-- [ ] `.gitignore` 補 `debug_responses/`（`NTUST_DEBUG_ENROLLMENT=true` 時寫入）與 `config/`（`monitor/config.py` 可從 JSON 讀學生密碼）。
-
 ## 需使用者裁示
 
 - [ ] 兩位使用者（heij82351、bocho960321）的校務帳號在 SSO 送出後得到「Error. An error occurred while processing your request」錯誤頁（2026-09-08 凌晨，同一段程式對第三位帳號正常），worker 每 15 分鐘會再試 3 次。請他們用瀏覽器登入 https://courseselection.ntust.edu.tw 看 SSO 是否要求改密碼或顯示其他訊息。
