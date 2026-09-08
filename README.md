@@ -173,7 +173,7 @@ backend 以 `NTUST_Course_Monitor` 相同方式常駐在家用 Windows 主機（
 
 - 程式位於 `C:\Users\hezhe\source\repos\course-compass`，venv 在 `.venv\`，`.env` 放在 repo 根目錄
 - `scripts/deployment/run_backend.bat` 複製到該 repo 根目錄，由工作排程器 `Course_Compass_Backend`（開機啟動、S4U）常駐，監聽 `0.0.0.0:8000`，log 在 `logs\backend.log`
-- 課程監控 worker（原 NTUST_Course_Monitor）同樣常駐於此：`scripts/deployment/run_monitor.bat` 複製到 repo 根目錄，由工作排程器 `Course_Compass_Monitor` 執行 `python -m backend.monitor.worker`，log 在 `logs\monitor.log`（stdout）與 `logs\ntust_monitor.log`（每日輪替 7 天）。`.env` 另需 `ENCRYPTION_KEY`、`NTUST_SEMESTER`、`NTUST_ENROLLMENT_LOG_RETENTION_DAYS`（見 `.env.example`）
+- 課程監控 worker（原 NTUST_Course_Monitor）同樣常駐於此：`scripts/deployment/run_monitor.bat` 複製到 repo 根目錄，由工作排程器 `Course_Compass_Monitor` 執行 `python -m backend.monitor.worker`，log 在 `logs\monitor.log`（stdout）與 `logs\ntust_monitor.log`（每日輪替 7 天）。`.env` 另需 `NTUST_SEMESTER`、`NTUST_ENROLLMENT_LOG_RETENTION_DAYS`（見 `.env.example`）；通知用的 `smtp_password`／`resend_api_key` 與校務密碼共用 `SCHOOL_CREDENTIALS_ENCRYPTION_SECRET` 加密（`ENCRYPTION_KEY` 已於 2026-09-08 淘汰）
 - venv 需額外安裝 `tzdata`，否則 `ZoneInfo("Asia/Taipei")` 會失敗
 - iOS `Info.plist` 的 `BackendServiceBaseURL` 指向 `https://hezhen.taile9e4a0.ts.net`（tailscale serve 提供的 HTTPS，不需 ATS 例外）
 

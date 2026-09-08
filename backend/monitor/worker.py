@@ -233,19 +233,18 @@ class SupabaseMonitor(CourseMonitor):
                 try:
                     user_id = settings.get('user_id')
                     is_encrypted = settings.get('is_encrypted', False)
-                
-                    # 處理加密/解密
-                    raw_student_password = settings.get('student_password') or ''
+
+                    # user_settings 只剩通知用的密鑰（smtp_password / resend_api_key）需要加解密；
+                    # 校務密碼一律在 app_private.school_credentials，不再讀 user_settings.student_password。
                     raw_smtp_password = settings.get('smtp_password') or ''
                     raw_resend_api_key = settings.get('resend_api_key') or ''
-                    student_password = raw_student_password
                     smtp_password = raw_smtp_password
                     resend_api_key = raw_resend_api_key
-                
-                    if not is_encrypted and (raw_student_password or raw_smtp_password or raw_resend_api_key):
-                        # 需要加密；若未配置 ENCRYPTION_KEY，避免把明文誤標記為已加密
+
+                    if not is_encrypted and (raw_smtp_password or raw_resend_api_key):
+                        # 前端寫入明文並把 is_encrypted 設 false；這裡加密後寫回
                         if self.crypto.fernet is None:
-                            logger.error(f"使用者 {user_id[:8]} 有敏感資料但未設定 ENCRYPTION_KEY，略過自動加密")
+                            logger.error(f"使用者 {user_id[:8]} 有敏感資料但未設定加密金鑰，略過自動加密")
                         else:
                             # 前端只改其中一個密碼時會把整列標成未加密，其他欄位仍是密文；
                             # 已能解密的欄位視為已加密，不可再加密一次（否則永遠解不開）。
@@ -255,9 +254,6 @@ class SupabaseMonitor(CourseMonitor):
                                 return self.crypto.encrypt(raw)
 
                             update_data = {'is_encrypted': True}
-                            if raw_student_password:
-                                update_data['student_password'] = _ensure_encrypted(raw_student_password)
-                                student_password = self.crypto.decrypt(update_data['student_password'])
                             if raw_smtp_password:
                                 update_data['smtp_password'] = _ensure_encrypted(raw_smtp_password)
                                 smtp_password = self.crypto.decrypt(update_data['smtp_password'])
@@ -267,22 +263,19 @@ class SupabaseMonitor(CourseMonitor):
 
                             try:
                                 self.supabase.table('user_settings').update(update_data).eq('user_id', user_id).execute()
-                                logger.info(f"已將使用者 {user_id[:8]} 的敏感設定加密並寫回資料庫")
+                                logger.info(f"已將使用者 {user_id[:8]} 的通知密鑰加密並寫回資料庫")
                             except Exception as e:
                                 logger.error(f"加密寫回資料庫失敗: {e}")
                     elif is_encrypted:
-                        # 需要解密
                         if self.crypto.fernet is None:
-                            logger.error(f"使用者 {user_id[:8]} 的設定標記為已加密，但 ENCRYPTION_KEY 不可用，將跳過敏感欄位")
-                            student_password = ''
+                            logger.error(f"使用者 {user_id[:8]} 的設定標記為已加密，但加密金鑰不可用，將跳過通知密鑰")
                             smtp_password = ''
                             resend_api_key = ''
-                        elif student_password:
-                            student_password = self.crypto.decrypt(student_password)
-                        if smtp_password and self.crypto.fernet is not None:
-                            smtp_password = self.crypto.decrypt(smtp_password)
-                        if resend_api_key and self.crypto.fernet is not None:
-                            resend_api_key = self.crypto.decrypt(resend_api_key)
+                        else:
+                            if smtp_password:
+                                smtp_password = self.crypto.decrypt(smtp_password)
+                            if resend_api_key:
+                                resend_api_key = self.crypto.decrypt(resend_api_key)
 
                     # Read email notification preference
                     email_notify = settings.get('email_notify', False)
@@ -333,16 +326,17 @@ class SupabaseMonitor(CourseMonitor):
                         self._sync_attempt_count_from_db(user_id, course)
                         user_courses.append(course)
 
-                    # 校務帳密以 app_private.school_credentials 為準（Compass 統一保存），
-                    # 沒有才退回 user_settings 的 legacy 欄位。
+                    # 校務帳密唯一來源：app_private.school_credentials（Compass 與 worker 共用）。
+                    # 沒有就只查名額，不能自動加選。
                     student_id = settings.get('student_id')
+                    student_password = ''
                     try:
                         secret = get_school_credentials_secret(user_id)
                         if secret.get('hasPassword') and secret.get('username'):
                             student_id = secret['username']
                             student_password = secret['password']
                     except (CredentialStoreError, Exception) as e:
-                        logger.debug(f"讀取 app_private 校務帳密失敗（uid={user_id[:8]}），改用 user_settings：{e}")
+                        logger.warning(f"讀取 app_private 校務帳密失敗（uid={user_id[:8]}），此使用者無法自動加選：{e}")
 
                     check_interval_ms = settings.get('check_interval') or 30000
                     self.users_data.append({

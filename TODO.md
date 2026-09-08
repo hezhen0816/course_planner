@@ -14,7 +14,7 @@
 
 ## P1 業務主線
 
-- [ ] 淘汰 `ENCRYPTION_KEY`（條件已成立：前端已不再寫 `user_settings.student_password`）：移除 worker 的 legacy 讀取路徑、`scripts/monitor/rotate_encryption_key.py`、`.env` 與 Windows `.env` 的 `ENCRYPTION_KEY`，並清掉 `user_settings.student_password` 欄位資料。
+- [ ] 淘汰 `ENCRYPTION_KEY`：程式已改（worker 通知密鑰改用 `SCHOOL_CREDENTIALS_ENCRYPTION_SECRET`、不再讀 `user_settings.student_password`），待使用者授權後依序：`scripts/monitor/retire_encryption_key.py --apply`（重新加密 1 筆 resend key、清 3 筆 student_password）→ 部署 worker → 從本機與 Windows `.env` 刪 `ENCRYPTION_KEY`。之後可再開 migration 移除 `user_settings.student_password` 欄位本身。
 - [ ] 課程查詢改共用 `tr_rooms` fetcher（低優先）。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
 - [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。

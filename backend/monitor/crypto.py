@@ -1,30 +1,36 @@
-import os
 import logging
+from typing import Optional
+
 from cryptography.fernet import Fernet
 
+from ..credentials import CredentialStoreError, _fernet
+
 logger = logging.getLogger('ntust_monitor')
+
 
 class CryptoError(RuntimeError):
     pass
 
 
 class CryptoManager:
+    """Fernet for user_settings secrets (smtp_password, resend_api_key).
+
+    Uses the same SCHOOL_CREDENTIALS_ENCRYPTION_SECRET as app_private.school_credentials,
+    so the worker needs exactly one secret. ENCRYPTION_KEY was retired on 2026-09-08.
+    """
+
     def __init__(self):
-        self.key = os.getenv('ENCRYPTION_KEY')
-        self.fernet = None
-        if self.key:
-            try:
-                self.fernet = Fernet(self.key.encode())
-            except Exception as e:
-                logger.error(f"初始化加密模組失敗，請檢查 ENCRYPTION_KEY 格式: {e}")
-        else:
-            logger.warning("未設定 ENCRYPTION_KEY，加密功能將無法使用")
+        self.fernet: Optional[Fernet] = None
+        try:
+            self.fernet = _fernet()
+        except CredentialStoreError as e:
+            logger.warning(f"未設定 SCHOOL_CREDENTIALS_ENCRYPTION_SECRET，user_settings 的敏感欄位將無法加解密：{e}")
 
     def encrypt(self, data: str) -> str:
         if not data:
             return data
         if not self.fernet:
-            raise CryptoError("未設定 ENCRYPTION_KEY，無法加密")
+            raise CryptoError("未設定 SCHOOL_CREDENTIALS_ENCRYPTION_SECRET，無法加密")
         try:
             return self.fernet.encrypt(data.encode()).decode()
         except Exception as e:
@@ -32,7 +38,7 @@ class CryptoManager:
             raise CryptoError(f"加密失敗: {e}") from e
 
     def is_ciphertext(self, data: str) -> bool:
-        """True if `data` is a Fernet token encrypted with the current key."""
+        """True if `data` is a Fernet token encrypted with the current secret."""
         if not data or not self.fernet:
             return False
         try:
@@ -45,7 +51,7 @@ class CryptoManager:
         if not data:
             return data
         if not self.fernet:
-            raise CryptoError("未設定 ENCRYPTION_KEY，無法解密")
+            raise CryptoError("未設定 SCHOOL_CREDENTIALS_ENCRYPTION_SECRET，無法解密")
         try:
             return self.fernet.decrypt(data.encode()).decode()
         except Exception as e:
