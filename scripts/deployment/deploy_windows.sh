@@ -7,7 +7,8 @@
 #   1. builds web/dist pointed at the Tailscale HTTPS origin (unless --skip-web)
 #   2. git pull --ff-only on the Windows checkout and installs backend deps
 #   3. copies web/dist to the Windows checkout so FastAPI serves it at "/"
-#   4. restarts the Course_Compass_Backend scheduled task
+#   4. restarts the Course_Compass_Backend and Course_Compass_Monitor scheduled tasks
+#      (Stop-Process below kills every course-compass python, the worker included)
 #   5. ensures `tailscale serve` maps https://hezhen.<tailnet>.ts.net -> :8000
 set -euo pipefail
 
@@ -35,9 +36,9 @@ if [[ $SKIP_WEB -eq 0 ]]; then
   scp -q -r "$ROOT/web/dist" "$SSH_HOST:$WIN_REPO/web/dist"
 fi
 
-echo "==> Restarting backend task"
+echo "==> Restarting backend + monitor tasks"
 # Comparison syntax (no $_) keeps this free of shell-escaping pitfalls.
-ssh -o BatchMode=yes "$SSH_HOST" "powershell -NoProfile -Command \"Stop-ScheduledTask Course_Compass_Backend; Get-Process python -ErrorAction SilentlyContinue | Where-Object Path -like '*course-compass*' | Stop-Process -Force; Start-Sleep 2; Start-ScheduledTask Course_Compass_Backend\""
+ssh -o BatchMode=yes "$SSH_HOST" "powershell -NoProfile -Command \"Stop-ScheduledTask Course_Compass_Backend; Stop-ScheduledTask Course_Compass_Monitor; Get-Process python -ErrorAction SilentlyContinue | Where-Object Path -like '*course-compass*' | Stop-Process -Force; Start-Sleep 2; Start-ScheduledTask Course_Compass_Backend; Start-ScheduledTask Course_Compass_Monitor; Start-Sleep 3; Get-ScheduledTask Course_Compass_Backend, Course_Compass_Monitor | Select-Object TaskName, State | Format-Table -HideTableHeaders\""
 
 echo "==> Ensuring tailscale serve -> :8000"
 ssh -o BatchMode=yes "$SSH_HOST" "tailscale serve --bg 8000 >nul 2>&1 & tailscale serve status"
