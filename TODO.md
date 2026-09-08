@@ -25,8 +25,6 @@
 
 ## P2 重構／共用（2026-09-08 子代理審查 backend/monitor 與 backend 重複處，按價值排序）
 
-- [ ] 學期偵測三份（`monitor/semester.py`、`tr_rooms.fetch_current_query_semester`、`api/courses.py`）：保留 `monitor/semester.py` 的驗證與候選回退，讓另外兩處呼叫它。
-- [ ] `NTUST_VERIFY_SSL` 與代理：旗標在 `config.py` 與 `monitor/api_client.py`、`monitor/enrollment.py` 各解析一次，`urllib3.disable_warnings` 呼叫兩次，代理設定在 `api_client` 與 `enrollment` 重複；做一個 `build_session(verify_ssl, proxies)`。
 - [ ] 日誌：`monitor/utils.setup_logging` 是唯一的集中設定，Compass 其他模組各自 `getLogger`；抽成 `backend/logging_setup.py`。
 - [ ] 時區：`monitor/monitor.py` 內嵌 `ZoneInfo('Asia/Taipei')`，改用 `backend/time_utils.now`。
 

@@ -10,11 +10,13 @@ try:
     from .config import CLASS_PERIODS, DAY_CODES, DAY_NAMES, DEFAULT_TIMEOUT, QUERY_COURSE_API_URL, SEMESTERS_INFO_URL, TAIPEI
     from .models import TRRoomMeeting
     from .ntust_common import normalize
+    from .monitor.semester import get_default_semester
     from .time_utils import now
 except ImportError:  # pragma: no cover
     from config import CLASS_PERIODS, DAY_CODES, DAY_NAMES, DEFAULT_TIMEOUT, QUERY_COURSE_API_URL, SEMESTERS_INFO_URL, TAIPEI
     from models import TRRoomMeeting
     from ntust_common import normalize
+    from monitor.semester import get_default_semester
     from time_utils import now
 
 ROOM_RE = re.compile(r"\bTR-\d+(?:-\d+)?\b", re.IGNORECASE)
@@ -52,20 +54,10 @@ def query_course_payload(semester: str, *, include_cross_school: bool = False) -
 
 
 def fetch_current_query_semester(verify_ssl: bool) -> str:
-    response = requests.get(
-        SEMESTERS_INFO_URL,
-        headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
-        timeout=DEFAULT_TIMEOUT,
-        verify=verify_ssl,
-    )
-    response.raise_for_status()
-    semesters = response.json()
-    for item in semesters:
-        if item.get("CurrentSemester") and item.get("Static") is False:
-            return str(item["Semester"])
-    if semesters:
-        return str(semesters[0]["Semester"])
-    raise RuntimeError("課程查詢系統沒有回傳可用學期。")
+    """目前學期。實作共用 backend/monitor/semester.py：那份有學期格式驗證、
+    候選清單回退與日期兜底，這裡原本的簡化版都沒有（取不到就直接丟例外）。
+    """
+    return get_default_semester(verify_ssl=verify_ssl)
 
 
 # The school API rejects requests without a browser-like Origin/Referer.

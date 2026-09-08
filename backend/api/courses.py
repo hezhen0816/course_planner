@@ -8,12 +8,14 @@ import requests
 from fastapi import APIRouter, Header, HTTPException, Query
 
 try:
-    from ..config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from ..config import DEFAULT_VERIFY_SSL
+    from ..monitor.semester import fetch_semesters_info
     from ..course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from ..gpa import fetch_course_gpas
     from ..models import CourseSearchResult, CourseSemesterInfo
 except ImportError:  # pragma: no cover - supports PYTHONPATH=backend imports.
-    from config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from config import DEFAULT_VERIFY_SSL
+    from monitor.semester import fetch_semesters_info
     from course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from gpa import fetch_course_gpas
     from models import CourseSearchResult, CourseSemesterInfo
@@ -32,16 +34,8 @@ def create_courses_router(
     @router.get("/semesters", response_model=list[CourseSemesterInfo])
     def get_course_semesters() -> list[CourseSemesterInfo]:
         try:
-            response = requests.get(
-                SEMESTERS_INFO_URL,
-                headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
-                timeout=30,
-                verify=DEFAULT_VERIFY_SSL,
-            )
-            response.raise_for_status()
-            semesters = response.json()
-            if not isinstance(semesters, list):
-                raise RuntimeError("課程查詢系統回傳格式不是學期清單。")
+            # 共用 backend/monitor/semester.py 的抓取與快取，不再各自打一次 semestersinfo
+            semesters = list(fetch_semesters_info(verify_ssl=DEFAULT_VERIFY_SSL))
             return [
                 CourseSemesterInfo(
                     semester=str(item.get("Semester") or ""),

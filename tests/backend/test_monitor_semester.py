@@ -4,7 +4,7 @@ from backend.monitor import semester as semester_mod
 
 
 def test_fetch_current_semester_prefers_official_current_semester(monkeypatch) -> None:
-    semester_mod.fetch_current_semester.cache_clear()
+    semester_mod.fetch_semesters_info.cache_clear()
 
     class FakeResponse:
         def raise_for_status(self) -> None:
@@ -22,8 +22,7 @@ def test_fetch_current_semester_prefers_official_current_semester(monkeypatch) -
 
 
 def test_get_default_semester_falls_back_to_first_candidate(monkeypatch) -> None:
-    semester_mod.fetch_current_semester.cache_clear()
-    semester_mod.fetch_semester_candidates.cache_clear()
+    semester_mod.fetch_semesters_info.cache_clear()
 
     def raise_error(*args, **kwargs):
         raise RuntimeError("boom")

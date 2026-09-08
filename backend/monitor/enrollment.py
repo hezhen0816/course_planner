@@ -21,11 +21,10 @@ from bs4 import BeautifulSoup
 
 from .config import CourseConfig
 from .env_manager import EnvManager
-from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging
+from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, build_session
 from ..ntust_common import captcha_required, is_hidden_element, login_to_target
 
 # 禁用 SSL 警告（如果禁用驗證）
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 設置日誌
 logger = setup_logging()
@@ -61,26 +60,16 @@ class EnrollmentClient:
             verify_ssl: 是否驗證 SSL 證書
             proxies: 代理配置字典，如果為 None 則從環境變數讀取
         """
-        # 初始化環境變數管理器
         self.env_manager = EnvManager()
-        
-        if verify_ssl is None:
-            env_verify = self.env_manager.get('NTUST_VERIFY_SSL', 'true').lower()
-            verify_ssl = env_verify in ('true', '1', 'yes')
-        
-        self.verify_ssl = verify_ssl
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
+        # verify_ssl 與代理的解析共用 utils.build_session（原本三個檔各解析一次）
+        self.session, self.verify_ssl = build_session(
+            verify_ssl,
+            proxies,
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            env_manager=self.env_manager,
+        )
         self.is_logged_in = False
-        
-        # 設置代理
-        if proxies:
-            self.session.proxies.update(proxies)
-        else:
-            self._setup_proxy()
-        
+
         # 速率限制追蹤
         self.login_times = deque()  # 記錄登入時間
         self.enroll_times = deque()  # 記錄加選時間
@@ -101,40 +90,6 @@ class EnrollmentClient:
         except (ValueError, TypeError):
             self._response_log_retention_days = 7
         self._last_log_cleanup_at = 0.0
-    
-    def _setup_proxy(self):
-        """從環境變數設置代理"""
-        proxy_type = self.env_manager.get('NTUST_PROXY_TYPE', '').lower()
-        proxy_host = self.env_manager.get('NTUST_PROXY_HOST')
-        proxy_port = self.env_manager.get('NTUST_PROXY_PORT')
-        proxy_username = self.env_manager.get('NTUST_PROXY_USERNAME')
-        proxy_password = self.env_manager.get('NTUST_PROXY_PASSWORD')
-        
-        if not proxy_type or not proxy_host or not proxy_port:
-            return
-        
-        # 構建代理 URL
-        if proxy_username and proxy_password:
-            proxy_url = f"{proxy_type}://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
-        else:
-            proxy_url = f"{proxy_type}://{proxy_host}:{proxy_port}"
-        
-        # 設置代理
-        if proxy_type in ['http', 'https']:
-            self.session.proxies = {
-                'http': proxy_url,
-                'https': proxy_url
-            }
-        elif proxy_type == 'socks5':
-            # 使用 requests session scoped SOCKS5，避免全域 socket 汙染
-            socks_proxy_url = proxy_url.replace('socks5://', 'socks5h://', 1)
-            self.session.proxies = {
-                'http': socks_proxy_url,
-                'https': socks_proxy_url
-            }
-            logger.info(f"已設置 SOCKS5 代理: {proxy_host}:{proxy_port}（session scoped）")
-        else:
-            logger.warning(f"不支援的代理類型: {proxy_type}")
     
     def _is_proxy_configured(self):
         """檢查是否配置了代理（包括 SOCKS5）"""

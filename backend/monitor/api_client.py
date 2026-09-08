@@ -12,11 +12,10 @@ import urllib3
 
 from .env_manager import EnvManager
 from .semester import fetch_semester_candidates, get_default_semester
-from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, _is_network_disconnected
+from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, _is_network_disconnected, build_session
 from ..tr_rooms import fetch_query_courses_filtered
 
 # 禁用 SSL 警告（如果禁用驗證）
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 設置日誌
 logger = setup_logging()
@@ -37,74 +36,16 @@ class NTUSTCourseAPI:
                        - False: 不驗證 SSL 證書（不推薦，僅用於解決證書問題）
             proxies: 代理配置字典，如果為 None 則從環境變數讀取
         """
-        # 初始化環境變數管理器
         self.env_manager = EnvManager()
-        
-        # 檢查環境變數
-        if verify_ssl is None:
-            env_verify = self.env_manager.get('NTUST_VERIFY_SSL', 'true').lower()
-            verify_ssl = env_verify in ('true', '1', 'yes')
-        
-        self.verify_ssl = verify_ssl
         self.last_request_latency_ms: Optional[float] = None
         self.last_search_failed: bool = False  # True when the last search_courses hit a transport/HTTP error
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json; charset=utf-8',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-        
-        # 設置代理
-        if proxies:
-            self.session.proxies.update(proxies)
-            _, proxy_details = self._get_proxy_info_for_logging()
-            logger.info(f"已設置代理（通過參數）{proxy_details}")
-        else:
-            self._setup_proxy()
-        
-        # 記錄代理配置狀態
-        self._log_proxy_status()
-        
-        if not self.verify_ssl:
-            logger.warning("SSL 證書驗證已禁用，這可能帶來安全風險")
-    
-    def _setup_proxy(self):
-        """從環境變數設置代理"""
-        proxy_type = self.env_manager.get('NTUST_PROXY_TYPE', '').lower()
-        proxy_host = self.env_manager.get('NTUST_PROXY_HOST')
-        proxy_port = self.env_manager.get('NTUST_PROXY_PORT')
-        proxy_username = self.env_manager.get('NTUST_PROXY_USERNAME')
-        proxy_password = self.env_manager.get('NTUST_PROXY_PASSWORD')
-        
-        if not proxy_type or not proxy_host or not proxy_port:
-            logger.info("未配置代理伺服器，將使用直接連接")
-            return
-        
-        # 構建代理 URL（用於日誌，不包含密碼）
-        if proxy_username and proxy_password:
-            proxy_url = f"{proxy_type}://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
-            proxy_url_log = f"{proxy_type}://{proxy_username}:***@{proxy_host}:{proxy_port}"
-        else:
-            proxy_url = f"{proxy_type}://{proxy_host}:{proxy_port}"
-            proxy_url_log = proxy_url
-        
-        # 設置代理
-        if proxy_type in ['http', 'https']:
-            self.session.proxies = {
-                'http': proxy_url,
-                'https': proxy_url
-            }
-            logger.info(f"已設置 HTTP/HTTPS 代理: {proxy_url_log}")
-        elif proxy_type == 'socks5':
-            # 使用 requests session scoped SOCKS5，避免全域 socket 汙染
-            socks_proxy_url = proxy_url.replace('socks5://', 'socks5h://', 1)
-            self.session.proxies = {
-                'http': socks_proxy_url,
-                'https': socks_proxy_url
-            }
-            logger.info(f"已設置 SOCKS5 代理（session scoped）: {proxy_url_log}")
-        else:
-            logger.warning(f"不支援的代理類型: {proxy_type}")
+        # verify_ssl 與代理的解析共用 utils.build_session（原本三個檔各解析一次）
+        self.session, self.verify_ssl = build_session(
+            verify_ssl,
+            proxies,
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            env_manager=self.env_manager,
+        )
     
     def _is_proxy_configured(self):
         """檢查是否配置了代理（包括 SOCKS5）"""
@@ -113,14 +54,6 @@ class NTUSTCourseAPI:
     def _get_proxy_info_for_logging(self):
         """獲取代理信息用於日誌記錄"""
         return get_proxy_info_for_logging(self.session.proxies, self.env_manager)
-    
-    def _log_proxy_status(self):
-        """記錄當前代理配置狀態"""
-        if self.session.proxies:
-            _, proxy_details = self._get_proxy_info_for_logging()
-            logger.info(f"當前 session 已配置代理{proxy_details}")
-        else:
-            logger.info("當前 session 未配置代理，將使用直接連接")
     
     def verify_proxy_usage(self) -> Dict[str, any]:
         """

@@ -424,3 +424,86 @@ def get_proxy_info_for_logging(session_proxies: Optional[Dict], env_manager: Opt
     
     return proxy_info, proxy_details
 
+
+
+# 與 worker／client 共用同一棵 logger（setup_logging 設定的是 'ntust_monitor'）
+logger = logging.getLogger('ntust_monitor')
+
+
+# --- 共用的 requests session 建立 ---------------------------------------------
+# NTUST_VERIFY_SSL 原本在 config.py、api_client.py、enrollment.py 各解析一次，
+# 代理設定也在 api_client 與 enrollment 各有一份幾乎相同的 _setup_proxy。
+# 這裡收成一處，兩個 client 共用。
+
+def resolve_verify_ssl(explicit: Optional[bool] = None, env_manager: Optional['EnvManager'] = None) -> bool:
+    """None 代表依環境變數 NTUST_VERIFY_SSL 決定（預設開啟驗證）。"""
+    if explicit is not None:
+        return bool(explicit)
+    if env_manager is None:
+        from .env_manager import EnvManager
+        env_manager = EnvManager()
+    return (env_manager.get('NTUST_VERIFY_SSL', 'true') or 'true').lower() in ('true', '1', 'yes')
+
+
+def proxies_from_env(env_manager: Optional['EnvManager'] = None) -> Optional[Dict[str, str]]:
+    """由環境變數組出 requests 用的 proxies；未設定回 None。
+
+    SOCKS5 一律轉成 socks5h（DNS 走代理）並走 session.proxies，
+    不動全域 socket，避免汙染同一行程裡的其他連線。
+    """
+    if env_manager is None:
+        from .env_manager import EnvManager
+        env_manager = EnvManager()
+    proxy_type = (env_manager.get('NTUST_PROXY_TYPE', '') or '').lower()
+    host = env_manager.get('NTUST_PROXY_HOST')
+    port = env_manager.get('NTUST_PROXY_PORT')
+    if not proxy_type or not host or not port:
+        return None
+
+    username = env_manager.get('NTUST_PROXY_USERNAME')
+    password = env_manager.get('NTUST_PROXY_PASSWORD')
+    auth = f"{username}:{password}@" if username and password else ''
+    url = f"{proxy_type}://{auth}{host}:{port}"
+
+    if proxy_type in ('http', 'https'):
+        pass
+    elif proxy_type == 'socks5':
+        url = url.replace('socks5://', 'socks5h://', 1)
+    else:
+        logger.warning(f"不支援的代理類型: {proxy_type}")
+        return None
+    return {'http': url, 'https': url}
+
+
+def build_session(
+    verify_ssl: Optional[bool] = None,
+    proxies: Optional[Dict[str, str]] = None,
+    user_agent: Optional[str] = None,
+    env_manager: Optional['EnvManager'] = None,
+) -> Tuple['requests.Session', bool]:
+    """建立設定好 verify_ssl 與代理的 session，回傳 (session, verify_ssl)。
+
+    `proxies` 傳入時直接採用（每位使用者自己的代理設定）；沒傳才讀環境變數。
+    """
+    import requests
+
+    if env_manager is None:
+        from .env_manager import EnvManager
+        env_manager = EnvManager()
+    resolved_verify = resolve_verify_ssl(verify_ssl, env_manager)
+
+    session = requests.Session()
+    if user_agent:
+        session.headers.update({'User-Agent': user_agent})
+
+    effective = proxies if proxies else proxies_from_env(env_manager)
+    if effective:
+        session.proxies.update(effective)
+        _, details = get_proxy_info_for_logging(session.proxies, env_manager)
+        logger.info(f"已設置代理{details}")
+    else:
+        logger.info("未配置代理伺服器，將使用直接連接")
+
+    if not resolved_verify:
+        logger.warning("SSL 證書驗證已禁用，這可能帶來安全風險")
+    return session, resolved_verify

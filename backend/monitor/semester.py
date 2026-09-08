@@ -59,7 +59,9 @@ def _extract_semester_candidates(items: Any) -> list[str]:
 
 
 @lru_cache(maxsize=1)
-def fetch_current_semester(verify_ssl: bool = True) -> str:
+def fetch_semesters_info(verify_ssl: bool = True) -> tuple[dict[str, Any], ...]:
+    """官方學期清單原始資料。三處（monitor、tr_rooms、api/courses）共用這一支，
+    不要各自再打一次 semestersinfo。回 tuple 是為了能放進 lru_cache。"""
     response = requests.get(
         SEMESTERS_INFO_URL,
         headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
@@ -67,23 +69,20 @@ def fetch_current_semester(verify_ssl: bool = True) -> str:
         verify=verify_ssl,
     )
     response.raise_for_status()
-    semester = _extract_semester(response.json())
+    payload = response.json()
+    return tuple(payload) if isinstance(payload, list) else ()
+
+
+def fetch_current_semester(verify_ssl: bool = True) -> str:
+    semester = _extract_semester(list(fetch_semesters_info(verify_ssl=verify_ssl)))
     if semester:
         logger.info(f"已取得官方最新學期: {semester}")
         return semester
     raise RuntimeError("課程查詢系統沒有回傳可用學期。")
 
 
-@lru_cache(maxsize=1)
 def fetch_semester_candidates(verify_ssl: bool = True) -> list[str]:
-    response = requests.get(
-        SEMESTERS_INFO_URL,
-        headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
-        timeout=15,
-        verify=verify_ssl,
-    )
-    response.raise_for_status()
-    candidates = _extract_semester_candidates(response.json())
+    candidates = _extract_semester_candidates(list(fetch_semesters_info(verify_ssl=verify_ssl)))
     if candidates:
         logger.info(f"已取得官方學期候選清單: {', '.join(candidates[:5])}")
     return candidates

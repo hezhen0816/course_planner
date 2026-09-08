@@ -20,6 +20,12 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 後端共用：build_session 與學期偵測合一；學校端知識寫成文件
+
+`NTUST_VERIFY_SSL` 原本在 `config.py`、`api_client.py`、`enrollment.py` 各解析一次，`urllib3.disable_warnings` 呼叫兩次，`_setup_proxy` 在兩個 client 各有一份幾乎相同的實作。收成 `monitor/utils.py` 的 `resolve_verify_ssl`／`proxies_from_env`／`build_session`（SOCKS5 一律轉 socks5h 走 session.proxies，不動全域 socket），兩個 client 共用。
+學期偵測三份：`monitor/semester.py` 有格式驗證、候選回退與日期兜底，另外兩處是簡化版（取不到就丟例外）。抽出 `fetch_semesters_info`（快取原始清單），`tr_rooms.fetch_current_query_semester` 委派給 `get_default_semester`，`api/courses` 的學期清單改讀同一支，semestersinfo 不再被打三次。
+另外把今天查到的學校端行為寫成 `docs/data-contracts/ntust-systems.md`（SSO 進入點與登入頁的假錯誤、各頁面資料來源、Restrict1/2 語意、通識第三碼 G 規則、選課階段時程、速率保護），並在 AGENTS.md 指向它——這些都是「看程式不會知道、每次都要重查」的東西。
+
 ## 2026-09-09 新版本提示；寫死的學期改為由日期推算
 
 部署後使用者的分頁仍跑舊 bundle，同一天踩兩次「明明部署了卻沒生效」（通識分類、修課中顯示）。新增 `UpdateNotice`：每 5 分鐘與分頁重新可見時抓一次 `index.html`（`cache: 'no-store'`），比對其中的 `/assets/*.js` 與目前載入的是否相同，不同就顯示可點的重新整理橫幅；抓不到就不提示，避免離線誤報。

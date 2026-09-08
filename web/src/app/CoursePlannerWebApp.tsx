@@ -19,7 +19,6 @@ import { useCourseData } from '../shared/hooks/useCourseData';
 import { AuthPage } from './AuthPage';
 import { AppModals } from './AppModals';
 import { Navbar, type AppPage } from './Navbar';
-import { SafetyNotice } from './SafetyNotice';
 import { UpdateNotice } from './UpdateNotice';
 import { CourseSearchCenter } from '../features/course-search/CourseSearchCenter';
 import { useCourseSearch } from '../features/course-search/useCourseSearch';
@@ -855,7 +854,6 @@ export default function CoursePlannerWebApp() {
 
       <main className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
         <UpdateNotice />
-        <SafetyNotice />
 
         {activePage === 'course-search' && (
           <CourseSearchCenter
