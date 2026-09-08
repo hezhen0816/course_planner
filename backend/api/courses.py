@@ -9,10 +9,12 @@ from fastapi import APIRouter, Header, HTTPException, Query
 
 try:
     from ..config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from ..course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from ..gpa import fetch_course_gpas
     from ..models import CourseSearchResult, CourseSemesterInfo
 except ImportError:  # pragma: no cover - supports PYTHONPATH=backend imports.
     from config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
+    from course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from gpa import fetch_course_gpas
     from models import CourseSearchResult, CourseSemesterInfo
 
@@ -138,8 +140,9 @@ def _course_search_result(course: dict[str, Any]) -> CourseSearchResult:
         classroom=str(course.get("ClassRoomNo") or ""),
         node=str(course.get("Node") or ""),
         contents=str(course.get("Contents") or ""),
-        selected_count=_as_int(course.get("ChooseStudent")),
-        capacity=_as_int(course.get("Restrict2")),
+        selected_count=selected_count(course),
+        # 加退選上限優先，該欄位為 9999／空值時退回初選上限（見 backend/course_capacity.py）
+        capacity=capacity_limit(course, ADD_DROP_PERIOD),
     )
 
 

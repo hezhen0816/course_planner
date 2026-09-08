@@ -21,6 +21,7 @@ from .monitor import CourseMonitor, _enroll_thread_local
 from .config import MonitorConfig, CourseConfig
 from .email_sender import EmailSender
 from .enrollment import EnrollmentClient
+from ..course_capacity import capacity_limit, format_enrolled
 from .api_client import NTUSTCourseAPI
 from .semester import get_default_semester
 from .utils import setup_logging
@@ -200,12 +201,8 @@ class SupabaseMonitor(CourseMonitor):
         """Override to write availability changes to Supabase system_logs"""
         super()._add_notification(course, current_count, course_info, previous_remaining)
 
-        restrict1 = course_info.get('Restrict1', '')
-        if restrict1 and restrict1 != '9999':
-            try:
-                restrict1_int = int(restrict1)
-            except (ValueError, TypeError):
-                return
+        restrict1_int = capacity_limit(course_info, getattr(self, 'enrollment_period', 'A06'))
+        if restrict1_int is not None:
             remaining = restrict1_int - current_count
 
             # Skip notification on initial check (previous_remaining is None = no actual change)
@@ -228,6 +225,13 @@ class SupabaseMonitor(CourseMonitor):
             self.user_email_notify_map = {}
             self.user_smtp_map = {}
             self.user_resend_map = {}
+
+            # 過期學期判定用；取不到就傳空字串，這一輪不判定任何課程過期
+            try:
+                current_semester = get_default_semester()
+            except Exception as e:
+                logger.warning(f"無法取得當前學期，本輪不判定課程是否過期：{e}")
+                current_semester = ''
 
             for settings in settings_response.data:
                 try:
@@ -311,7 +315,9 @@ class SupabaseMonitor(CourseMonitor):
 
                     user_courses = []
                     for c_data in courses_response.data:
-                        if c_data.get('status') in ('paused', 'enrolled'):
+                        if c_data.get('status') in ('paused', 'enrolled', 'expired'):
+                            continue
+                        if self._expire_if_past_semester(c_data, current_semester):
                             continue
                         course = CourseConfig(
                             course_no=c_data.get('course_code', ''),
@@ -372,6 +378,31 @@ class SupabaseMonitor(CourseMonitor):
         except Exception as e:
             logger.error(f"讀取設定失敗：{e}")
             return False
+
+    def _expire_if_past_semester(self, c_data: Dict, current_semester: str) -> bool:
+        """學期已結束的課程停止輪詢：名額不會再變，每幾秒查一次只是白打學校 API。
+
+        只認「嚴格早於當前學期」；等於或晚於都保留，使用者可以預先加下學期的課。
+        學期字串同為 4 碼（1141、114H），直接字串比較即可排序。
+        """
+        semester = str(c_data.get('semester') or '').strip()
+        if not current_semester or not semester or semester >= current_semester:
+            return False
+        course_code = c_data.get('course_code', '')
+        try:
+            self._db_update_with_retry('monitored_courses', {'status': 'expired'}, 'id', c_data.get('id'))
+        except Exception as e:
+            logger.error(f"標記過期課程失敗 {course_code}：{e}")
+            return False
+        logger.info(f"課程 {course_code}（學期 {semester}）早於當前學期 {current_semester}，停止監控")
+        user_id = c_data.get('user_id')
+        if user_id:
+            self._write_log(
+                f"「{c_data.get('course_name') or course_code}」屬於學期 {semester}，已結束，停止監控"
+                f"（目前學期 {current_semester}）。若要繼續監控請在課程設定改成目前學期。",
+                level='warn', user_id=user_id,
+            )
+        return True
 
     def _lookup_auth_email(self, user_id: Optional[str]) -> str:
         """由 Supabase Auth 取得帳號信箱（快取於 user_email_map）。"""
@@ -457,8 +488,7 @@ class SupabaseMonitor(CourseMonitor):
                 if state:
                     course_info = state.get('course_info', {})
                     current_count = state.get('count', 0)
-                    restrict1 = course_info.get('Restrict1', '?')
-                    enrolled_str = f"{current_count}/{restrict1}"
+                    enrolled_str = format_enrolled(course_info, getattr(self, 'enrollment_period', 'A06'))
                     course_semester = (course_info.get('Semester') or course.semester or '').strip()
                     update_data = {
                         'course_name': course_info.get('CourseName', course.course_name),
@@ -633,6 +663,9 @@ class SupabaseMonitor(CourseMonitor):
             verify_ssl_by_user = {
                 u.get('user_id'): bool(u.get('verify_ssl', True)) for u in self.users_data if u.get('user_id')
             }
+            verify_period = {
+                u.get('user_id'): u.get('enrollment_period', 'A06') for u in self.users_data if u.get('user_id')
+            }
             api_by_verify: Dict[bool, NTUSTCourseAPI] = {}
 
             for course_data in pending_resp.data:
@@ -646,13 +679,7 @@ class SupabaseMonitor(CourseMonitor):
                         api = api_by_verify[verify_ssl] = NTUSTCourseAPI(verify_ssl=verify_ssl)
                     c = api.get_course_by_code(course_code, semester=course_data.get('semester') or '', course_name=course_data.get('course_name') or '')
                     if c:
-                        restrict1 = c.get('Restrict1', '')
-                        chosen = c.get('ChooseStudent', 0)
-                        enrolled_str = (
-                            f"{chosen}/{restrict1}"
-                            if restrict1 and restrict1 != '9999'
-                            else str(chosen if chosen is not None else '---')
-                        )
+                        enrolled_str = format_enrolled(c, verify_period.get(course_data.get('user_id'), 'A06'))
                         update_data = {
                             'course_name': c.get('CourseName', course_code),
                             'current_enrolled': enrolled_str,

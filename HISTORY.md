@@ -16,6 +16,17 @@
 
 ---
 
+## 2026-09-08 名額判定欄位查清（TODO 的假設是錯的）＋過期學期停止輪詢
+
+查證來源：querycourse 的 `app.js` 標籤表（權威，不是猜的）——
+`ChooseStudent`=本校選課人數、`ThreeStudent`=系統學校選課人數、`AllStudent`=選課總人數(本校/系統學校)、
+`Restrict1`=**本校初選人數上限(限舊生)**、`Restrict2`=**本校加退選人數上限/新生第一學期初選人數上限**、
+`NTURestrict`/`NTNURestrict`=台大/師大名額。所以列表的 `50(45/5)` 是總人數(本校/系統學校)，**不是額外名額**；台大師大學生有自己的名額，分母是本校上限時分子就必須是 `ChooseStudent`，不能用 `AllStudent`。
+
+真正的缺陷：監控一律用 `Restrict1`，且把 9999 當成「無人數上限、恆視為有名額」。1151 學期 2189 門課中有 **833 門 `Restrict1=9999`**（其中 235 門依 `Restrict2` 其實已額滿），這些課永遠不會通知額滿，儀表板還顯示「40/9999」。量測後確認：兩欄都有實數的 1356 門課裡兩者**完全相同**（差異 0），只有 R2 的 810 門、沒有只有 R1 的——所以「依階段選欄位、該欄位 9999 就退回另一個」既正確又安全。抽成 `backend/course_capacity.py`，monitor、worker、Compass 課程查詢、官方初選四處共用。行為變化：原本被當成無上限的課若已額滿，自動加選不再盲送（使用者裁示採用新行為，且舊行為會在正式選課期間立刻用光 3 次嘗試然後永久停止）。
+
+同時查出：13 門監控課程有 10 門屬於過去學期（最舊 1121，三年前），每幾秒被查一次但資料永不變動。worker 改為在讀設定時把 `semester` 嚴格早於當前學期的課標成 `status='expired'` 並寫一筆使用者可見的日誌，之後不再輪詢；取不到當前學期或寫入失敗就不判定，避免課程靜默消失。前端顯示「學期已結束」與說明，改學期存檔時會把 `expired` 重設回 `monitoring`（否則改了也不會再被檢查）。
+
 ## 2026-09-08 移除 `user_settings.student_password` 欄位
 
 資料已於稍早清空、`ENCRYPTION_KEY` 也已從本機與 Windows 的 `.env` 移除（查證：resend 密鑰以共用密鑰解得開）。前端與 worker 都用 `select('*')` 讀取、upsert payload 不含此欄位，所以直接 drop 不影響。套用後查證：PostgREST 回 42703（欄位不存在），worker 實際 `fetch_config()` 三位使用者都仍從 `app_private.school_credentials` 取得密碼。任務完成的一次性腳本 `retire_encryption_key.py`、`migrate_gpa_api_keys.py` 一併移除。

@@ -23,6 +23,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from ..course_capacity import capacity_limit, format_enrolled
 from .api_client import NTUSTCourseAPI
 from .config import ConfigManager, CourseConfig, MonitorConfig
 from .enrollment import EnrollmentClient
@@ -381,23 +382,19 @@ class CourseMonitor:
         
         # 在鎖外計算通知和加選邏輯（避免長時間持有鎖）
         # 檢查剩餘名額變化，只在變化時發送通知
-        restrict1 = course_info.get('Restrict1', '')
+        period = getattr(self, 'enrollment_period', 'A06')
+        limit = capacity_limit(course_info, period)
         should_notify = False
         can_try_auto_enroll = False
         previous_remaining = None
-        
-        # Restrict1 為空或 9999 代表無人數上限：不做名額通知，但仍允許自動加選
-        is_unlimited = not restrict1 or str(restrict1).strip() in ('', '9999')
-        if is_unlimited:
+
+        # 該階段沒有上限：不做名額通知，但仍允許自動加選
+        if limit is None:
             remaining = 1  # 恆視為有名額
         else:
-            try:
-                restrict1_int = int(restrict1)
-            except (ValueError, TypeError):
-                logger.warning(f"課程 {course.alias} 的 Restrict1 值無法解析為數字: {restrict1!r}")
-                return True
+            restrict1_int = limit
             remaining = restrict1_int - current_count
-            
+
             # 取得上次的剩餘名額
             if previous_count is not None:
                 previous_remaining = restrict1_int - previous_count
@@ -857,8 +854,8 @@ class CourseMonitor:
             # 取得詳細資訊
             course_no = course_info.get('CourseNo', course.course_no or '')
             teacher = course_info.get('CourseTeacher', 'N/A')
-            restrict1 = course_info.get('Restrict1', '')
-            
+            enrolled_display = format_enrolled(course_info, getattr(self, 'enrollment_period', 'A06'))
+
             # 取得課程名稱（優先使用 course.course_name，如果沒有則使用 API 回應的 CourseName）
             course_name = course.course_name or course_info.get('CourseName', course.alias or course_no)
             
@@ -877,25 +874,8 @@ class CourseMonitor:
                 enroll_style = "dim"
             
             # 計算人數限制、已選人數、剩餘名額
-            if restrict1 and restrict1 != '9999':
-                try:
-                    restrict1_int = int(restrict1)
-                except (ValueError, TypeError):
-                    limit_str = "N/A"
-                    enrolled_str = str(count)
-                    remaining_str = "N/A"
-                    remaining_style = "dim"
-                    table.add_row(
-                        course_name,
-                        course_no,
-                        teacher,
-                        limit_str,
-                        enrolled_str,
-                        Text(remaining_str, style=remaining_style),
-                        Text(enroll_status, style=enroll_style),
-                        last_check
-                    )
-                    continue
+            restrict1_int = capacity_limit(course_info, getattr(self, 'enrollment_period', 'A06'))
+            if restrict1_int is not None:
                 remaining = restrict1_int - count
                 
                 # 人數限制顯示
@@ -1011,13 +991,8 @@ class CourseMonitor:
     
     def _add_notification(self, course: CourseConfig, current_count: int, course_info: Dict, previous_remaining: Optional[int] = None) -> None:
         """添加名額通知到列表（只在名額變化時調用）"""
-        restrict1 = course_info.get('Restrict1', '')
-        if restrict1 and restrict1 != '9999':
-            try:
-                restrict1_int = int(restrict1)
-            except (ValueError, TypeError):
-                logger.warning(f"課程 {course.alias} 的 Restrict1 值無法解析為數字: {restrict1!r}")
-                return
+        restrict1_int = capacity_limit(course_info, getattr(self, 'enrollment_period', 'A06'))
+        if restrict1_int is not None:
             remaining = restrict1_int - current_count
             
             timestamp = datetime.now().strftime("%H:%M:%S")

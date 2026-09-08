@@ -21,6 +21,7 @@ try:
         INITIAL_SELECTION_SAVE_INDEX_URL,
         INITIAL_SELECTION_URL,
     )
+    from .course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from .time_utils import now
     from .ntust_common import login, normalize, requires_hidden_form_callback, split_lines, submit_hidden_form
     from .school_sessions import session_state_from_requests_session
@@ -41,6 +42,7 @@ except ImportError:  # pragma: no cover
     from school_sessions import session_state_from_requests_session
     from schedule import find_latest_course_list_url, parse_course_list
     from tr_rooms import fetch_current_query_semester, fetch_query_courses_filtered
+    from course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from time_utils import now
 
 
@@ -663,8 +665,8 @@ def _enrich_registered_courses_from_query_system(
         course["classroom"] = str(match.get("ClassRoomNo") or "")
         course["node"] = str(match.get("Node") or "")
         course["contents"] = str(match.get("Contents") or "")
-        course["selected_count"] = _as_int(match.get("ChooseStudent"))
-        course["capacity"] = _as_int(match.get("Restrict2"))
+        course["selected_count"] = selected_count(match)
+        course["capacity"] = capacity_limit(match, ADD_DROP_PERIOD)
         course["credits"] = _as_float(match.get("CreditPoint")) if _as_float(match.get("CreditPoint")) is not None else course.get("credits")
         course["require_option"] = str(match.get("RequireOption") or course.get("require_option") or "")
         course["teacher"] = str(match.get("CourseTeacher") or course.get("teacher") or "")

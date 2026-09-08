@@ -56,7 +56,12 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
       const { error } = await supabase
         .from('monitored_courses')
         .update({
-          status: paused ? 'paused' : (course.status === 'paused' ? 'monitoring' : course.status),
+          // 改了學期就讓它重回輪詢：worker 會跳過 status='expired'，不重設的話改了也不會再被檢查
+          status: paused
+            ? 'paused'
+            : (course.status === 'paused' || (course.status === 'expired' && semester !== course.semester)
+                ? 'monitoring'
+                : course.status),
           max_attempts: maxAttempts,
           semester,
         })
@@ -278,6 +283,8 @@ const CoursesView: React.FC = () => {
   const [adding, setAdding] = useState(false);
   const [settingsCourse, setSettingsCourse] = useState<Course | null>(null);
   const [semesterOptions, setSemesterOptions] = useState<SemesterOption[]>([]);
+  // 學校標為 current 的學期；判斷課程是否屬於已結束的學期
+  const currentSemester = pickDefaultSemester(semesterOptions.length > 0 ? semesterOptions : FALLBACK_SEMESTER_OPTIONS);
   const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
@@ -474,11 +481,15 @@ const CoursesView: React.FC = () => {
             const isAvailable = course.status === 'available';
             const isPaused = course.status === 'paused';
             const isEnrolled = course.status === 'enrolled';
+            // 已被 worker 標記，或學期早於目前學期（worker 下一輪才會標記）
+            const isExpired = course.status === 'expired'
+              || Boolean(currentSemester && course.semester && course.semester < currentSemester);
 
             return (
               <div key={course.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors">
                 <div className="flex items-start mb-4 sm:mb-0">
                   <div className={`mt-1 w-2.5 h-2.5 rounded-full mr-4 shrink-0 ${
+                    isExpired ? 'bg-slate-300' :
                     isAvailable ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' :
                     isMonitoring ? 'bg-blue-500 animate-pulse' :
                     isEnrolled ? 'bg-emerald-500' :
@@ -489,17 +500,32 @@ const CoursesView: React.FC = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-slate-800 text-lg">{course.course_name}</h4>
                       <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">{course.course_code}</span>
-                      <span className="text-xs px-2 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-200">{course.semester}</span>
+                      <span
+                        title={isExpired ? `學期 ${course.semester} 已結束（目前 ${currentSemester}）` : undefined}
+                        className={`text-xs px-2 py-0.5 rounded border ${
+                          isExpired ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}
+                      >
+                        {course.semester}
+                      </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                        isExpired ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         isMonitoring ? 'bg-blue-50 text-blue-600 border-blue-200' :
                         isEnrolled   ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
                         isPaused     ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
                         course.status === 'error' ? 'bg-red-50 text-red-600 border-red-200' :
                         'bg-slate-50 text-slate-500 border-slate-200'
                       }`}>
-                        {{ monitoring: '監控中', enrolled: '已加選', paused: '已暫停', pending: '待處理', error: '錯誤' }[course.status] ?? course.status}
+                        {isExpired
+                          ? '學期已結束'
+                          : ({ monitoring: '監控中', enrolled: '已加選', paused: '已暫停', pending: '待處理', error: '錯誤' } as Record<string, string>)[course.status] ?? course.status}
                       </span>
                     </div>
+                    {isExpired && (
+                      <p className="mt-1.5 text-xs text-amber-700">
+                        這門課屬於學期 {course.semester}，名額不會再變動，已停止檢查。可在「課程設定」改成目前學期，或直接刪除。
+                      </p>
+                    )}
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                       <span>人數: <span className={isAvailable ? 'text-green-600 font-medium' : 'text-slate-700'}>{course.current_enrolled}</span></span>
                       {course.auto_enroll && (
