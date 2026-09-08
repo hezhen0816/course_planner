@@ -28,6 +28,8 @@ import { usePlannerStats } from '../features/planning/usePlannerStats';
 import { useSchoolSync } from '../features/school-sync/useSchoolSync';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { MonitorPage } from '../features/monitor/MonitorPage';
+import MonitorSettingsView from '../features/monitor/MonitorSettingsView';
+import ProxyView from '../features/monitor/ProxyView';
 import { addMonitoredCourse } from '../features/monitor/addMonitoredCourse';
 import {
   MANUAL_SET_ID,
@@ -96,6 +98,23 @@ type RecognitionRequirementDraft = {
   courseCodePrefix?: string | null;
   note?: string;
 };
+
+/** 換頁後元素要等 React 畫出來才存在，短間隔重試幾次再捲過去。
+ *  用 setTimeout 而非 requestAnimationFrame：分頁在背景時 rAF 不會觸發。 */
+function scrollToWhenReady(id: string, retries = 40, intervalMs = 50) {
+  let left = retries;
+  const tick = () => {
+    const target = document.getElementById(id);
+    if (target) {
+      // 導覽列是 sticky，直接對齊 top 會被它蓋住，扣掉它的高度
+      const navHeight = document.querySelector('[data-app-nav]')?.getBoundingClientRect().height ?? 0;
+      window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - navHeight - 8 });
+      return;
+    }
+    if (left-- > 0) window.setTimeout(tick, intervalMs);
+  };
+  window.setTimeout(tick, 0);
+}
 
 export default function CoursePlannerWebApp() {
   const { session, loading: authLoading } = useAuth();
@@ -924,7 +943,16 @@ export default function CoursePlannerWebApp() {
           />
         )}
 
-        {activePage === 'monitor' && <MonitorPage onGoToCourseSearch={() => setActivePage('course-search')} />}
+        {activePage === 'monitor' && (
+          <MonitorPage
+            onGoToCourseSearch={() => setActivePage('course-search')}
+            onGoToSettings={() => {
+              // 從監控頁過來的人要找的是監控設定，不是設定頁最上面的同步狀態
+              setActivePage('settings');
+              scrollToWhenReady('monitor-settings');
+            }}
+          />
+        )}
 
         {activePage === 'settings' && (
           <SettingsPage
@@ -943,6 +971,12 @@ export default function CoursePlannerWebApp() {
             onOpenSchoolSync={openSchoolDataSync}
             onOpenOfficialSelectionSync={() => openOfficialSelectionSync()}
             onClearSavedSchoolCredentials={() => void clearSavedSchoolCredentials()}
+            monitorSettings={(
+              <>
+                <MonitorSettingsView />
+                <ProxyView />
+              </>
+            )}
             onSaveTargets={(targets) => {
               setData((prev) => ({ ...prev, targets }));
             }}

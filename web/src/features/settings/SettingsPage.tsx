@@ -34,6 +34,8 @@ type SettingsPageProps = {
   onOpenSchoolSync: (mode?: 'courses' | 'history') => void;
   onOpenOfficialSelectionSync: () => void;
   onClearSavedSchoolCredentials: () => void;
+  /** 選課監控與代理設定；由 app 層帶入，避免 settings 反向依賴 monitor。 */
+  monitorSettings?: ReactNode;
 };
 
 export function SettingsPage({
@@ -56,6 +58,7 @@ export function SettingsPage({
   onOpenSchoolSync,
   onOpenOfficialSelectionSync,
   onClearSavedSchoolCredentials,
+  monitorSettings,
 }: SettingsPageProps) {
   const [settingsForm, setSettingsForm] = useState(initialSettings);
   const [gpaApiKeyInput, setGpaApiKeyInput] = useState('');
@@ -100,7 +103,7 @@ export function SettingsPage({
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">設定</p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">資料同步與畢業門檻</h1>
-            <p className="mt-1 text-sm text-slate-500">校務資料同步、畢業門檻數字與帳號層級設定集中放在這裡，不混進選課流程。</p>
+            <p className="mt-1 text-sm text-slate-500">校務資料同步、畢業門檻數字、監控與通知等帳號層級設定集中放在這裡，不混進選課流程。</p>
           </div>
           <button
             onClick={() => onOpenSchoolSync('courses')}
@@ -341,6 +344,8 @@ export function SettingsPage({
           </div>
         </form>
       </section>
+
+      {monitorSettings}
 
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <form

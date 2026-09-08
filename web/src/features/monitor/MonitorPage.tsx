@@ -1,18 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, BookOpen, Loader2, Settings } from 'lucide-react';
+import { Activity, ArrowUpRight, BookOpen, Loader2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { HEARTBEAT_TIMEOUT_MS } from './workerStatus';
 import DashboardView from './DashboardView';
 import CoursesView from './CoursesView';
-import MonitorSettingsView from './MonitorSettingsView';
-import ProxyView from './ProxyView';
 
-type MonitorTab = 'dashboard' | 'courses' | 'settings';
+// 監控設定與代理設定住在「設定」頁（SettingsPage 的 monitorSettings 插槽），
+// 這裡只留「現在在監聽什麼」。
+type MonitorTab = 'dashboard' | 'courses';
 
 const tabs: Array<{ id: MonitorTab; icon: React.ComponentType<{ size?: number }>; label: string }> = [
   { id: 'dashboard', icon: Activity, label: '儀表板' },
   { id: 'courses', icon: BookOpen, label: '課程管理' },
-  { id: 'settings', icon: Settings, label: '監控設定' },
 ];
 
 /** 全域 Worker 存活偵測間隔（毫秒） */
@@ -192,7 +191,10 @@ const WorkerBadge: React.FC<{ workerOnline: boolean | null }> = ({ workerOnline 
   </span>
 );
 
-export const MonitorPage: React.FC<{ onGoToCourseSearch?: () => void }> = ({ onGoToCourseSearch }) => {
+export const MonitorPage: React.FC<{
+  onGoToCourseSearch?: () => void;
+  onGoToSettings?: () => void;
+}> = ({ onGoToCourseSearch, onGoToSettings }) => {
   const [activeTab, setActiveTab] = useState<MonitorTab>('dashboard');
   const workerOnline = useWorkerOnline();
 
@@ -212,7 +214,7 @@ export const MonitorPage: React.FC<{ onGoToCourseSearch?: () => void }> = ({ onG
           <EngineToggle workerOnline={workerOnline} />
         </div>
 
-        <div className="border-t border-slate-100 px-5">
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-5">
           <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => (
             <button
@@ -230,17 +232,21 @@ export const MonitorPage: React.FC<{ onGoToCourseSearch?: () => void }> = ({ onG
             </button>
           ))}
           </div>
+          {onGoToSettings && (
+            <button
+              type="button"
+              onClick={onGoToSettings}
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap py-3 text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              監控設定
+              <ArrowUpRight size={14} />
+            </button>
+          )}
         </div>
       </section>
 
       {activeTab === 'dashboard' && <DashboardView workerOnline={workerOnline === true} onGoToCourseSearch={onGoToCourseSearch} />}
       {activeTab === 'courses' && <CoursesView onGoToCourseSearch={onGoToCourseSearch} />}
-      {activeTab === 'settings' && (
-        <div className="space-y-4">
-          <MonitorSettingsView />
-          <ProxyView />
-        </div>
-      )}
     </div>
   );
 };
