@@ -16,6 +16,11 @@
 
 ---
 
+## 2026-09-08 只有開自動加選才登入 SSO；冷卻改遞增；B11430227 自動加選已關
+
+查證：B11430227 三門課都開了自動加選，worker 每輪 `check_all_courses` 前的 session 保活只要 `is_logged_in` 為 False 就預先登入，所以即使 SSO 回 500 也每 15 分鐘再打 3 次，不會停。查名額走公開 querycourse API 不需登入，預先登入只為加選準備。
+做法：`_keep_session_alive_locked` 在該使用者沒有任何課程開自動加選時直接略過（開啟後加選路徑本來就會登入）；`EnrollmentClient` 冷卻改 15 → 30 → 60 分鐘遞增，登入成功重置。依使用者指示，用 service key 把 B11430227 的三門課 `auto_enroll` 改為 false（他本人可隨時在監控頁再開）。
+
 ## 2026-09-08 token 驗證加 60 秒快取；worker 缺 service role key 改為直接失敗
 
 `resolve_user_id` 以 token 的 SHA-256 為鍵快取成功結果 60 秒，且不超過 JWT `exp`；失敗不快取，上限 2000 筆。撤銷的 token 最多多活 60 秒，可接受（Supabase 本身 access token 也是一小時）。worker 啟動改讀 `backend/config.py` 的 `SUPABASE_URL`／`SUPABASE_SERVICE_ROLE_KEY`，缺服務金鑰直接退出：以前退回 anon key 會讓 `app_private` 讀取與 session 寫入靜默失敗。

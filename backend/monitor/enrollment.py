@@ -89,6 +89,7 @@ class EnrollmentClient:
         self._rate_limit_lock = threading.Lock()
         self._login_failures = 0
         self._login_cooldown_until = 0.0
+        self._login_cooldown_streak = 0  # 連續進入冷卻的次數（決定冷卻長度）
         # 冷卻狀態變化回呼：(until_ts 或 None, reason)。None 代表冷卻解除。
         self.on_login_pause: Optional[Callable[[Optional[float], str], None]] = None
         # repo root (backend/monitor/enrollment.py -> three levels up)
@@ -345,6 +346,8 @@ class EnrollmentClient:
     
     LOGIN_FAILURE_COOLDOWN_AFTER = 3        # consecutive failures before pausing
     LOGIN_FAILURE_COOLDOWN_SECONDS = 15 * 60
+    # 冷卻後再連續失敗就拉長：15 分 → 30 分 → 60 分（上限），登入成功即重置
+    LOGIN_FAILURE_COOLDOWN_SCHEDULE = (15 * 60, 30 * 60, 60 * 60)
 
     def seed_login_cooldown(self, until_ts: Optional[float]) -> None:
         """從持久儲存還原冷卻（worker 重啟後沿用），過期的值忽略。"""
@@ -357,17 +360,21 @@ class EnrollmentClient:
         event: Optional[Tuple[Optional[float], str]] = None
         with self._rate_limit_lock:
             if success:
-                had_pause = self._login_cooldown_until > 0.0 or self._login_failures > 0
+                had_pause = self._login_cooldown_until > 0.0 or self._login_failures > 0 or self._login_cooldown_streak > 0
                 self._login_failures = 0
                 self._login_cooldown_until = 0.0
+                self._login_cooldown_streak = 0
                 if had_pause:
                     event = (None, '')
             else:
                 self._login_failures += 1
                 if self._login_failures >= self.LOGIN_FAILURE_COOLDOWN_AFTER:
-                    self._login_cooldown_until = time.time() + self.LOGIN_FAILURE_COOLDOWN_SECONDS
+                    schedule = self.LOGIN_FAILURE_COOLDOWN_SCHEDULE
+                    seconds = schedule[min(self._login_cooldown_streak, len(schedule) - 1)]
+                    self._login_cooldown_streak += 1
+                    self._login_cooldown_until = time.time() + seconds
                     self._login_failures = 0
-                    logger.warning(f"連續登入失敗 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {self.LOGIN_FAILURE_COOLDOWN_SECONDS // 60} 分鐘")
+                    logger.warning(f"連續登入失敗 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次（第 {self._login_cooldown_streak} 次冷卻），暫停自動登入 {seconds // 60} 分鐘")
                     event = (self._login_cooldown_until, message)
         if event is not None and self.on_login_pause is not None:
             try:

@@ -176,7 +176,14 @@ class CourseMonitor:
         finally:
             enroll_lock.release()
 
+    def _needs_school_session(self) -> bool:
+        """只有開了自動加選的課程才需要選課系統 session；查名額走公開 API，不必登入。"""
+        return any(getattr(c, 'auto_enroll', False) for c in (self.config.courses or []))
+
     def _keep_session_alive_locked(self) -> None:
+        if not self._needs_school_session():
+            # 沒有課程要自動加選就不預先登入、不保活，避免對 SSO 反覆嘗試
+            return
         current_time = time.time()
         
         # 每隔一定時間檢查一次 session

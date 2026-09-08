@@ -94,3 +94,42 @@ def test_lookup_auth_email_uses_auth_admin_and_caches(monkeypatch) -> None:
     assert monitor._lookup_auth_email("u1") == "who@example.com"
     assert _Admin.calls == 1
     assert monitor._lookup_auth_email(None) == ""
+
+
+def test_cooldown_escalates_15_30_60_and_resets_on_success() -> None:
+    client = _client()
+    untils: list[float] = []
+    client.on_login_pause = lambda until, reason: untils.append(until) if until else None
+    for expected_minutes in (15, 30, 60, 60):
+        client._login_cooldown_until = 0.0  # simulate the previous cooldown having expired
+        for _ in range(3):
+            client._record_login_result(False, "x")
+        assert abs((untils[-1] - time.time()) - expected_minutes * 60) < 5
+    client._record_login_result(True)
+    assert client._login_cooldown_streak == 0
+    client._login_cooldown_until = 0.0
+    for _ in range(3):
+        client._record_login_result(False, "x")
+    assert abs((untils[-1] - time.time()) - 15 * 60) < 5
+
+
+def test_keepalive_skips_sso_when_no_course_has_auto_enroll(monkeypatch) -> None:
+    from backend.monitor.config import CourseConfig, MonitorConfig
+    from backend.monitor.monitor import CourseMonitor
+
+    monitor = CourseMonitor.__new__(CourseMonitor)
+    monitor.config = MonitorConfig(courses=[CourseConfig(course_no="A", semester="1141", auto_enroll=False)])
+    monitor.last_session_check = 0.0
+    monitor.last_session_keepalive = 0.0
+    monitor.session_check_interval = 0
+    monitor.session_keepalive_interval = 0
+    called: list[str] = []
+    monkeypatch.setattr(monitor, "_pre_login_if_needed", lambda: called.append("login") or True)
+    monitor.enrollment_client = type("C", (), {"is_logged_in": False})()
+
+    monitor._keep_session_alive_locked()
+    assert called == []
+
+    monitor.config.courses[0].auto_enroll = True
+    monitor._keep_session_alive_locked()
+    assert called == ["login"]

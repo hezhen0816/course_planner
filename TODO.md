@@ -39,5 +39,5 @@
 
 ## 需使用者裁示
 
-- [ ] B11430227（worker 代號 09f11b47）的校務帳號在 SSO 送出後仍回 500 錯誤頁（2026-09-08 10:12 登入流程合一部署後仍如此；另一位 B11410144 同次部署後已登入成功）。worker 每 15 分鐘試 3 次。請對方用瀏覽器登入 https://courseselection.ntust.edu.tw 看 SSO 是否要求改密碼或顯示其他訊息。
+- [ ] B11430227（worker 代號 09f11b47）的校務帳號在 SSO 送出後仍回 500 錯誤頁（2026-09-08，另一位 B11410144 已正常）。使用者決定先不管：已把他三門課的自動加選關掉，worker 不再為他登入。他若要用自動加選，請先用瀏覽器登入 https://courseselection.ntust.edu.tw 看 SSO 顯示什麼。
 - [ ] Web 已在 Vercel（tailnet 外可用），但校務同步與官方選課仍需瀏覽器在 tailnet 內連後端；若要讓這些功能在 tailnet 外用，需 Tailscale Funnel 加後端額外驗證層，目前決定不做。
