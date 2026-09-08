@@ -165,7 +165,7 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
                 }
               }}
               disabled={resetting}
-              className="flex items-center gap-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {resetting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
               重設

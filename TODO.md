@@ -10,12 +10,11 @@
 ## P0 正確性／阻斷性
 
 - [ ] SSO 鎖定保護的儀表板橫幅已部署（2026-09-08 10:12），尚未看到實際觸發：等 B11430227（09f11b47）連續 3 次 500 後，確認 `user_settings.login_paused_until` 有值、儀表板出現橫幅。
-- [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
+- [ ] 「重設加選次數」按鈕只驗到讀取（彈窗正確顯示「目前已嘗試 1 次」），實際點擊寫回 `attempt_count=0` 尚未驗；「加選 n/m」徽章只在該課開自動加選時顯示，目前無符合的課可看。
 
 ## P1 業務主線
 
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
-- [ ] GPA 查詢安全化已部署（2026-09-08 15:26：migration、1 位使用者的密鑰已搬進 `app_private`、`user_data` 明文已清除、後端與 Vercel 都是新版）；尚未用登入狀態實測課程查詢的 GPA 欄位是否仍有值。
 - [ ] Tailscale ACL（2026-09-08 評估後決定延後，非緊急）：tailnet 有 6 台 `dk.fire256@`／`dk.engineer256@` 的 Windows 節點，目前 allow-all。應用層已無漏洞（實測未帶 token 時 `/api/school-credentials`、`/api/schedule/*`、`/api/moodle/*`、`/api/gpa-api-key` 都回 401，只有公開課程查詢與 `/health` 回 200），所以主要價值不在 API，而在擋掉那些機器對 `hezhen` 這台 Windows 其他埠（RDP 3389、SMB 445 等）的存取。做的時候注意：policy 會取代預設 allow-all，必須同時明確保留同事對 `desktop-fc8n9ma` 報價系統（443）與寄信系統（8443）的存取，否則同事當場斷線；可先只做「限制 hezhen 這台」的最小版本。
 
 ## P2 改進

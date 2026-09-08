@@ -776,7 +776,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
             {logs.length > 0 && (
               <button
                 onClick={handleClearLogs}
-                className="text-xs flex items-center gap-1.5 text-slate-500 hover:text-red-500 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+                className="text-xs flex items-center gap-1.5 whitespace-nowrap text-slate-500 hover:text-red-500 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
                 <Trash2 size={14} />
                 清除

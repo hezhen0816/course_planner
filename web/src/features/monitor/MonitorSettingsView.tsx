@@ -440,7 +440,7 @@ const MonitorSettingsView: React.FC = () => {
                 type="button"
                 onClick={handleSendTestEmail}
                 disabled={testEmailSending}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {testEmailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                 發送測試信
