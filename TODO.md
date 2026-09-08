@@ -16,7 +16,7 @@
 
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
 - [ ] GPA 查詢安全化已部署（2026-09-08 15:26：migration、1 位使用者的密鑰已搬進 `app_private`、`user_data` 明文已清除、後端與 Vercel 都是新版）；尚未用登入狀態實測課程查詢的 GPA 欄位是否仍有值。
-- [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。
+- [ ] Tailscale ACL（2026-09-08 評估後決定延後，非緊急）：tailnet 有 6 台 `dk.fire256@`／`dk.engineer256@` 的 Windows 節點，目前 allow-all。應用層已無漏洞（實測未帶 token 時 `/api/school-credentials`、`/api/schedule/*`、`/api/moodle/*`、`/api/gpa-api-key` 都回 401，只有公開課程查詢與 `/health` 回 200），所以主要價值不在 API，而在擋掉那些機器對 `hezhen` 這台 Windows 其他埠（RDP 3389、SMB 445 等）的存取。做的時候注意：policy 會取代預設 allow-all，必須同時明確保留同事對 `desktop-fc8n9ma` 報價系統（443）與寄信系統（8443）的存取，否則同事當場斷線；可先只做「限制 hezhen 這台」的最小版本。
 
 ## P2 改進
 
