@@ -185,9 +185,37 @@ function GraduationProgressPanel({ data, stats }: { data: AppData; stats: Planne
           />
         ))}
       </div>
+      {/* 向度一直有算（usePlannerStats 的 genEdDimensions），只是沒畫出來；手機版有顯示 */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-slate-500">已修通識向度</span>
+        {GEN_ED_DIMENSIONS.map((dimension) => {
+          const done = stats.genEdDimensions.has(dimension);
+          return (
+            <span
+              key={dimension}
+              title={`${dimension}：${GEN_ED_DIMENSION_LABELS[dimension]}${done ? '（已修）' : '（未修）'}`}
+              className={`rounded-md px-2 py-1 text-xs font-medium ${
+                done ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'
+              }`}
+            >
+              {dimension}
+            </span>
+          );
+        })}
+      </div>
     </section>
   );
 }
+
+const GEN_ED_DIMENSIONS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
+const GEN_ED_DIMENSION_LABELS: Record<string, string> = {
+  A: '人文素養',
+  B: '當代文明',
+  C: '美感與人生探索',
+  D: '社會與歷史文化',
+  E: '群己與制度發展',
+  F: '自然與生命科學',
+};
 
 function ProgressTile({
   label,

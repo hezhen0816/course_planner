@@ -17,6 +17,7 @@ import type {
 import {
   RETAKE_SET_ID,
   coursesFromScheduleSync,
+  lookupGenEdDimensions,
   historyRecordsFromImport,
   lookupHistoricalSchedules,
   mergeHistoryRecordsIntoSemesters,
@@ -202,6 +203,15 @@ export function useSchoolSync({
         setSchoolSyncMessage('正在同步最新選課清單...');
         schedulePayload = await syncSchoolSchedule(username, password, token || undefined);
         courses = coursesFromScheduleSync(schedulePayload);
+        // 選課清單沒有 Dimension，用課碼回查課程查詢系統補上通識向度
+        const dimensions = await lookupGenEdDimensions(courses, querySemester);
+        if (dimensions.size > 0) {
+          courses = courses.map((course) => {
+            const code = (course.scheduledOffering?.courseNo || '').trim().toUpperCase();
+            const dimension = dimensions.get(code);
+            return dimension ? { ...course, dimension } : course;
+          });
+        }
         officialScheduleRows = officialScheduleRowsFromSlots(schedulePayload.slots);
       }
 

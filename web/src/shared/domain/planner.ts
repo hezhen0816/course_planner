@@ -5,9 +5,10 @@ import type {
   Course,
   CourseCategory,
   CourseProgram,
+  CourseSearchResult,
+  GenEdDimension,
   HistoryCourseRecord,
   HistoryImportResponse,
-  CourseSearchResult,
   PendingRequirement,
   RequirementOption,
   RequirementSet,
@@ -262,16 +263,62 @@ export function courseFromOffering(
   };
 }
 
+/**
+ * 通識課的課碼第三碼是 G（TCG、DTG、BAG、ECG、MIG…），另有 GE3 系列。
+ * 查證 2026-09-09：1151 學期 14 個這類前綴共 173 門，官方 Dimension 覆蓋率 100%，
+ * 且沒有任何第三碼為 G 的課沒有向度，所以這個規則精確。
+ * 之前只認 `GE` 開頭，導致 TCG 的通識課因為 required_type 是「必修」被歸成本系必修。
+ */
+export function isGenEdCourseCode(courseCode: string): boolean {
+  const code = courseCode.trim().toUpperCase();
+  if (code.length < 3) return false;
+  return code[2] === 'G' || code.startsWith('GE');
+}
+
 export function categoryFromSyncedCourse(course: SyncedCourseRow): CourseCategory {
   const name = course.course_name.toLowerCase();
   const code = course.course_code.toUpperCase();
   if (code.startsWith('PE') || name.includes('體育')) return 'pe';
   if (name.includes('國文') || name.includes('中文') || name.includes('文學閱讀')) return 'chinese';
   if (name.includes('英文') || name.includes('english') || name.includes('英語')) return 'english';
-  if (code.startsWith('GE')) return 'gen_ed';
+  // 通識判定必須早於 required_type：學校對通識也會標「必修」
+  if (isGenEdCourseCode(code)) return 'gen_ed';
   if (course.required_type === '必修') return 'compulsory';
   if (course.required_type === '選修') return 'elective';
   return 'unclassified';
+}
+
+/** 官方 Dimension 欄位（A–F 或「人文素養(A)」之類）取出向度代碼。 */
+export function genEdDimensionFromOfficial(value: string | null | undefined): GenEdDimension {
+  const text = (value || '').trim().toUpperCase();
+  if (!text) return 'None';
+  const matched = text.match(/[A-F]/);
+  return (matched?.[0] as GenEdDimension) || 'None';
+}
+
+/**
+ * 用課碼回查課程查詢系統補上通識向度：校務同步的選課清單沒有 Dimension 欄位，
+ * 但課程查詢有。只查通識課，避免對每門課都打一次 API。
+ */
+export async function lookupGenEdDimensions(
+  courses: Course[],
+  semester: string,
+): Promise<Map<string, GenEdDimension>> {
+  const codes = Array.from(new Set(
+    courses
+      .map((course) => (course.scheduledOffering?.courseNo || '').trim().toUpperCase())
+      .filter((code) => code && isGenEdCourseCode(code)),
+  ));
+  const entries = await Promise.all(codes.map(async (code): Promise<[string, GenEdDimension]> => {
+    try {
+      const results = await searchCourses(semester, code, 'code');
+      const matched = results.find((item) => item.course_no.trim().toUpperCase() === code) || results[0];
+      return [code, genEdDimensionFromOfficial(matched?.dimension)];
+    } catch {
+      return [code, 'None'];
+    }
+  }));
+  return new Map(entries.filter(([, dimension]) => dimension !== 'None'));
 }
 
 export function slotCodeFromSyncedSlot(slot: ScheduleSyncResponse['slots'][number]): string {

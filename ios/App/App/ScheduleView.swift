@@ -643,6 +643,11 @@ struct CourseNoteEditor: View {
         Form {
             Section("課堂資訊") {
                 LabeledContent("課程") { Text(course.name).foregroundStyle(.secondary) }
+                if !course.courseNo.isEmpty {
+                    LabeledContent("課碼") { Text(course.courseNo).monospaced().foregroundStyle(.secondary) }
+                }
+                LabeledContent("學分") { Text("\(course.credits, specifier: "%.0f")").foregroundStyle(.secondary) }
+                LabeledContent("類別") { Text(course.category.title).foregroundStyle(.secondary) }
                 TextField("授課教授", text: $course.instructor)
                 TextField("教授 Email", text: $course.email)
                     .keyboardType(.emailAddress)

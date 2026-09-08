@@ -20,6 +20,12 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 通識判定修正（第三碼 G）＋向度回查＋兩端顯示補齊
+
+查證：`categoryFromSyncedCourse` 只認 `GE` 開頭是通識，於是 `TCG039301 環境關懷與生態寫作`、`TCG100301 書法藝術` 因為學校標「必修」被歸成本系必修，讓通識少算、本系必修多算。抓 1151 全學期 2189 門統計課碼前綴與官方 `Dimension` 的關係：**第三碼是 G 的 14 個前綴（TCG/GE3/DTG/BAG/EEG/ADG/MBG/IBG/VEG/CXG/ECG/ETG/MEG/MIG）共 173 門，向度覆蓋率 100%，且沒有任何第三碼為 G 的課沒有向度**，因此以「課碼第三碼為 G 或 GE 開頭」判定通識，且必須早於 `required_type`。
+向度：校務同步的選課清單沒有 `Dimension`，改用課碼回查課程查詢系統（`lookupGenEdDimensions`，只查通識課，避免每門課都打一次 API）補上。
+顯示：`usePlannerStats` 本來就有算 `genEdDimensions`，只是網頁版沒畫出來（手機版有）；門檻完成度補上 A–F 向度標記，hover 顯示向度名稱。iOS 課程卡與課堂筆記補上課碼、學分、類別與向度。
+
 ## 2026-09-09 iOS：課表變成課堂筆記入口、補上成績試算、修掉存檔會抹掉網頁資料的問題
 
 查證到的資料遺失面（DB trigger 對 `semesters`／`settings`／`targets` 是「incoming 有就整包取代」）：iOS 的 `CloudCourse` 沒有 `scheduledOffering`，`cloudAppDataPayload()` 還把 `email`／`link`／`gradingPolicy` 寫死成 `nil`／`[]`，`CloudUserSettings` 也不含 `programDepartments`。所以在手機改一門課的老師名字，就會抹掉網頁版的課碼、節次、教室、必選修、Email、課程連結、整份成績試算權重與雙主修輔系系所設定。六位使用者的 `last_writer` 都還是 `web`、33 門課的 `scheduledOffering` 都完整，所以尚未實際發生。

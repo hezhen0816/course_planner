@@ -160,8 +160,16 @@ struct PlannerView: View {
                                             }
 
                                             HStack(spacing: 12) {
+                                                // 課碼取自網頁版寫入的 scheduledOffering
+                                                if !course.courseNo.isEmpty {
+                                                    Label(course.courseNo, systemImage: "number")
+                                                        .monospaced()
+                                                }
                                                 Label("\(course.credits, specifier: "%.0f") 學分", systemImage: "graduationcap")
                                                 Label(course.program.title, systemImage: "folder")
+                                                if course.dimension != .none {
+                                                    Label(course.dimension.title, systemImage: "square.grid.2x2")
+                                                }
                                             }
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
