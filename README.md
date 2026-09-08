@@ -179,13 +179,13 @@ backend 以 `NTUST_Course_Monitor` 相同方式常駐在家用 Windows 主機（
 
 Web 也一併由此後端提供：`web/dist` 存在時 FastAPI 會在 `/` 回傳 SPA，`/api/*` 不變。對外以 `tailscale serve` 提供 HTTPS，網址為 `https://hezhen.taile9e4a0.ts.net`，只有 tailnet 內的裝置（手機需開 Tailscale）連得到。
 
-更新程式（建置 web、同步 checkout 與 dist、重啟排程、確認 tailscale serve）：
+更新程式（唯一入口；規則寫在腳本裡：工作樹乾淨、跑測試、腳本內 push、pull 後比對 HEAD、只在相關檔案變動時 build web／重啟後端／重啟 worker、打 tailnet 入口做煙霧測試）：
 
 ```bash
 bash scripts/deployment/deploy_windows.sh
 ```
 
-只更新後端可加 `--skip-web`。
+`--fast` 跳過測試；`--force` 不看 diff 強制重建 web 並重啟後端與 worker。純文件 commit 不會重啟任何服務。
 
 ### 遷移 legacy 校務密碼
 

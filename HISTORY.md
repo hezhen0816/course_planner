@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 盤點 Windows 部署方式並把 deploy_windows.sh 補到報價系統同等護欄
+
+盤點：部署到 Windows 的有 4 個專案（course_planner → winhome；報價系統、工務管控、寄信系統 → dkfire），骨架都是「Mac ssh 叫 Windows git pull」，差別在護欄。報價系統最完整（乾淨樹、測試、腳本內 push、比對 HEAD、只在 .py 變動時重啟、煙霧測試），工務管控是其子集，本專案原本只有煙霧測試，寄信系統是手動清單（一次性、幾乎不改，不寫腳本）。決策：不統一 nssm／工作排程器與 dist 交付方式，只統一護欄；規則寫進 `~/AI協作/專案文件模板/AGENTS.md`「Windows 部署」。本專案腳本改為依 diff 決定 build web、重啟後端、重啟 worker，且只殺該任務自己的 python（原本一刀殺掉所有 course-compass python，是先前 worker 被殺卻不重啟的根源）。
+
 ## 2026-09-08 只有開自動加選才登入 SSO；冷卻改遞增；B11430227 自動加選已關
 
 查證：B11430227 三門課都開了自動加選，worker 每輪 `check_all_courses` 前的 session 保活只要 `is_logged_in` 為 False 就預先登入，所以即使 SSO 回 500 也每 15 分鐘再打 3 次，不會停。查名額走公開 querycourse API 不需登入，預先登入只為加選準備。
