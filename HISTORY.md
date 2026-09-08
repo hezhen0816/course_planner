@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 移除 `user_settings.student_password` 欄位
+
+資料已於稍早清空、`ENCRYPTION_KEY` 也已從本機與 Windows 的 `.env` 移除（查證：resend 密鑰以共用密鑰解得開）。前端與 worker 都用 `select('*')` 讀取、upsert payload 不含此欄位，所以直接 drop 不影響。套用後查證：PostgREST 回 42703（欄位不存在），worker 實際 `fetch_config()` 三位使用者都仍從 `app_private.school_credentials` 取得密碼。任務完成的一次性腳本 `retire_encryption_key.py`、`migrate_gpa_api_keys.py` 一併移除。
+
 ## 2026-09-08 15:26 GPA 安全化已上線
 
 migration 已套用；B11430207 的 62 字元密鑰搬進 `app_private.gpa_api_keys`（解密比對長度相同），`user_data.content.settings.gpaApi` 已移除。部署後查證：`/api/gpa-api-key` 無 token 回 401，未登入的課程查詢回 `gpa_status=not_enabled`，worker 200 行內 54 次查詢成功零錯誤。

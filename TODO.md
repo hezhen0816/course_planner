@@ -14,7 +14,6 @@
 
 ## P1 業務主線
 
-- [ ] `user_settings.student_password` 欄位資料已清空、`ENCRYPTION_KEY` 已淘汰（2026-09-08）；可再開一個 migration 直接移除該欄位（前端與 worker 都不再引用）。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
 - [ ] GPA 查詢安全化已部署（2026-09-08 15:26：migration、1 位使用者的密鑰已搬進 `app_private`、`user_data` 明文已清除、後端與 Vercel 都是新版）；尚未用登入狀態實測課程查詢的 GPA 欄位是否仍有值。
 - [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。
