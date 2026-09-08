@@ -9,8 +9,7 @@
 
 ## P0 正確性／阻斷性
 
-- [ ] 登入流程已合一（2026-09-08，`EnrollmentClient.login` → `ntust_common.login_to_target(entry_url=站台根目錄)`，本機用 B11430207 實登成功一次），待與下列一起部署 Windows worker；部署後看 `ntust_monitor.log` 的「預先登入成功」是否持續。
-- [ ] SSO 鎖定保護的儀表板警示已寫好（2026-09-08：`user_settings.login_paused_until/login_pause_reason`、worker 冷卻時寫入並在重啟後沿用、儀表板橫幅），待 `supabase db push`、push `main`、Windows 重佈；之後等 heij82351／bocho960321 再觸發一次冷卻，確認橫幅出現。
+- [ ] SSO 鎖定保護的儀表板橫幅已部署（2026-09-08 10:12），尚未看到實際觸發：等 B11430227（09f11b47）連續 3 次 500 後，確認 `user_settings.login_paused_until` 有值、儀表板出現橫幅。
 - [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
 - [ ] 手機 App 尚未實測 https 路徑：Xcode 27 Beta 6 裝機成功，但還沒從後端 log 看到手機經 `hezhen.taile9e4a0.ts.net` 的請求；請使用者開 Tailscale 後同步一次並確認。
 
@@ -43,5 +42,5 @@
 
 ## 需使用者裁示
 
-- [ ] 兩位使用者（heij82351、bocho960321）的校務帳號在 SSO 送出後得到「Error. An error occurred while processing your request」錯誤頁（2026-09-08 凌晨，同一段程式對第三位帳號正常），worker 每 15 分鐘會再試 3 次。請他們用瀏覽器登入 https://courseselection.ntust.edu.tw 看 SSO 是否要求改密碼或顯示其他訊息。
+- [ ] B11430227（worker 代號 09f11b47）的校務帳號在 SSO 送出後仍回 500 錯誤頁（2026-09-08 10:12 登入流程合一部署後仍如此；另一位 B11410144 同次部署後已登入成功）。worker 每 15 分鐘試 3 次。請對方用瀏覽器登入 https://courseselection.ntust.edu.tw 看 SSO 是否要求改密碼或顯示其他訊息。
 - [ ] Web 已在 Vercel（tailnet 外可用），但校務同步與官方選課仍需瀏覽器在 tailnet 內連後端；若要讓這些功能在 tailnet 外用，需 Tailscale Funnel 加後端額外驗證層，目前決定不做。

@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 10:12 部署登入流程合一等六個 commit
+
+migration `20260908170000` 已套用；Vercel、Windows 後端與 worker 都在 `93c0f49`。worker 重啟後三個帳號的預先登入：B11430207 成功、B11410144 成功（此帳號在舊流程下整天回 500）、B11430227 仍回 SSO 500。
+
 ## 2026-09-08 移除 `backend/supabase_schema.sql`
 
 程式與測試都沒有引用；內容與 migration 不一致（保留已淘汰的 `public.school_credentials`、沒有 monitor 三張表與今天新增的欄位）。否決「改寫成與 migration 同步」：同一事實只維護一處，schema 以 `supabase/migrations/` 為準。
