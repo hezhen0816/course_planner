@@ -11,7 +11,6 @@
 
 - [ ] SSO 鎖定保護的儀表板橫幅已部署（2026-09-08 10:12），尚未看到實際觸發：等 B11430227（09f11b47）連續 3 次 500 後，確認 `user_settings.login_paused_until` 有值、儀表板出現橫幅。
 - [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
-- [ ] 手機 App：`Info.plist` 的 Supabase 網址與 anon key 已於 2026-09-08 改指新專案（舊專案已刪，登入會回「hostname could not be found」），需重新用 Xcode 裝到手機；裝好後登入一次、開 Tailscale 同步一次，從後端 log 確認手機經 `hezhen.taile9e4a0.ts.net` 的請求。
 
 ## P1 業務主線
 

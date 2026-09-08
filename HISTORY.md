@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 12:45 iOS 已驗證：改 plist 後由 xcodebuild + devicectl 裝機，登入、課表／Moodle 讀取與同步都經 tailnet 進到後端
+
+後端 log 看到 tailnet IP 的 `/api/schedule`、`/api/moodle/assignments`、`POST /api/schedule/sync`（先 400 後 200）。iOS 對新 Supabase 專案與 https 路徑至此都確認。
+
 ## 2026-09-08 iOS 登入「hostname could not be found」：Info.plist 仍指舊 Supabase 專案
 
 合併時只改了 Web 與後端的 Supabase 設定，iOS `Info.plist` 的 `SupabaseURL`／`SupabaseAnonKey` 漏改，仍是已刪除的 `qpdvtsbqdpitreslazoe`。已改為 `eerlhmvwucnlbhemhvtz` 與其 publishable key；需重新建置安裝才生效。
