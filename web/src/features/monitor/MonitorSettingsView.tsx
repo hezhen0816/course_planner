@@ -165,19 +165,14 @@ const MonitorSettingsView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <header>
-        <h2 className="text-2xl font-bold text-slate-800">系統與通知設定</h2>
-        <p className="text-slate-500 text-sm mt-1">自訂監控策略及通知方式</p>
-      </header>
-
+    <div className="space-y-4">
       {/* Section 1: School Account (managed in Compass 設定 → 校務帳密) */}
       <section>
         <h3 className="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2">
           <KeyRound size={20} className="text-blue-500" />
           學校帳號
         </h3>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
           <p className="text-sm text-slate-600">
             監控與自動加選使用的學號與選課密碼，請至「設定」頁的「校務帳密」設定；此處不再另外儲存。
           </p>
@@ -190,7 +185,7 @@ const MonitorSettingsView: React.FC = () => {
           <Activity size={20} className="text-purple-500" />
           進階監控設定
         </h3>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
           {/* Interval */}
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -335,7 +330,7 @@ const MonitorSettingsView: React.FC = () => {
           <Bell size={20} className="text-blue-500" />
           通知設定
         </h3>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
           {/* LINE Notify */}
           <div className="p-6 border-b border-slate-100">
             <h4 className="font-medium text-slate-800 mb-1">LINE Notify 推播</h4>

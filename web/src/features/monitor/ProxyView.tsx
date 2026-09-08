@@ -114,7 +114,7 @@ const ProxyView: React.FC = () => {
       </header>
 
       {/* Info banner */}
-      <div className="flex gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+      <div className="flex gap-3 p-4 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
         <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
         <div>
           代理設定儲存後，後端 Worker 在下次循環時自動套用。
@@ -123,7 +123,7 @@ const ProxyView: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
           <h3 className="font-semibold text-slate-800 flex items-center gap-2">
             <Shield size={18} className="text-purple-500" /> 代理設定

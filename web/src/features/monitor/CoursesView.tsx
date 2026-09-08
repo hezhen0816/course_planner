@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Clock,
-  Plus,
   Settings,
   Trash2,
   Loader2,
@@ -79,7 +78,7 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-zoomIn">
+      <div className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-sm overflow-hidden animate-zoomIn">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
           <div>
@@ -93,7 +92,7 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
 
         {/* Body */}
         <div className="p-6 space-y-5">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-md border border-slate-200">
             <div className="flex items-center gap-3">
               {paused
                 ? <PauseCircle size={18} className="text-yellow-500" />
@@ -142,7 +141,7 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
             <p className="text-xs text-slate-500 mt-2">達到上限後可重設次數以繼續嘗試加選。</p>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
+          <div className="flex items-center justify-between p-4 bg-amber-50 rounded-md border border-amber-200">
             <div>
               <div className="text-sm font-medium text-amber-800">重設加選次數</div>
               <div className="text-xs text-amber-600 mt-0.5">目前已嘗試 {course.attempt_count ?? 0} 次；歸零後下次檢查時會重新嘗試加選</div>
@@ -191,7 +190,6 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
   );
 };
 
-const NTUST_API = 'https://querycourse.ntust.edu.tw/QueryCourse/api/courses';
 const NTUST_SEMESTERS_API = 'https://querycourse.ntust.edu.tw/QueryCourse/api/semestersinfo';
 const isValidSemester = (semester: string) => /^[0-9]{4}$/.test(semester);
 // 只在學校 API 打不通時使用；current 由日期推算，不寫死某一年
@@ -248,49 +246,13 @@ const mergeSemesterOptions = (base: SemesterOption[], extraSemesters: string[]):
   return merged;
 };
 
-const lookupCourseInfo = async (courseCode: string, semester: string): Promise<{ name: string; enrolled: string; found: boolean | null }> => {
-  try {
-    const res = await fetch(NTUST_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        Semester: semester,
-        CourseNo: courseCode,
-        CourseName: '', CourseTeacher: '', Dimension: '',
-        CourseNotes: '', CampusNotes: '',
-        ForeignLanguage: 0, OnlyIntensive: 0, OnlyGeneral: 0,
-        OnlyNTUST: 0, OnlyMaster: 0, OnlyUnderGraduate: 0, OnlyNode: 0,
-        Language: 'zh'
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const course = data[0];
-        const enrolled = course.Restrict1 && course.Restrict1 !== '9999'
-          ? `${course.ChooseStudent}/${course.Restrict1}`
-          : `${course.ChooseStudent ?? '---'}`;
-        return { name: course.CourseName || courseCode, enrolled, found: true };
-      }
-      // API 正常回應但沒有資料：這個學期查無此課程代碼
-      return { name: courseCode, enrolled: '---', found: false };
-    }
-  } catch {
-    // CORS or network issue — let Worker update later
-  }
-  return { name: courseCode, enrolled: '---', found: null };
-};
-
-const CoursesView: React.FC = () => {
+const CoursesView: React.FC<{ onGoToCourseSearch?: () => void }> = ({ onGoToCourseSearch }) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newCourseCode, setNewCourseCode] = useState('');
-  const [adding, setAdding] = useState(false);
   const [settingsCourse, setSettingsCourse] = useState<Course | null>(null);
   const [semesterOptions, setSemesterOptions] = useState<SemesterOption[]>([]);
   // 學校標為 current 的學期；判斷課程是否屬於已結束的學期
   const currentSemester = pickDefaultSemester(semesterOptions.length > 0 ? semesterOptions : FALLBACK_SEMESTER_OPTIONS);
-  const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -298,7 +260,6 @@ const CoursesView: React.FC = () => {
     const init = async () => {
       const options = await fetchSemesterOptions();
       setSemesterOptions(options);
-      setSelectedSemester(pickDefaultSemester(options));
       await fetchCourses();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -339,49 +300,6 @@ const CoursesView: React.FC = () => {
     }
   };
 
-  const addCourse = async () => {
-    const code = newCourseCode.trim().toUpperCase();
-    if (!code) return;
-    const semester = selectedSemester || pickDefaultSemester(semesterOptions);
-    if (!semester) {
-      alert('無法載入學期清單，請稍後再試。');
-      return;
-    }
-    if (courses.some(c => c.course_code.toUpperCase() === code && c.semester === semester)) {
-      alert(`課程代碼 ${code}（學期 ${semester}）已在監控清單中`);
-      return;
-    }
-    setAdding(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const courseInfo = await lookupCourseInfo(code, semester);
-      if (courseInfo.found === false) {
-        alert(`學期 ${semester} 查無課程代碼 ${code}，請確認代碼或改選其他學期。`);
-        return;
-      }
-      const { error } = await supabase
-        .from('monitored_courses')
-        .insert({
-          user_id: user.id,
-          course_code: code,
-          course_name: courseInfo.name,
-          semester,
-          status: 'pending',
-          current_enrolled: courseInfo.enrolled,
-          auto_enroll: false
-        });
-      if (error) throw error;
-      setNewCourseCode('');
-      fetchCourses();
-    } catch (error) {
-      console.error('Error adding course:', error);
-      alert('新增失敗');
-    } finally {
-      setAdding(false);
-    }
-  };
-
   const toggleAutoAdd = async (id: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
@@ -418,7 +336,7 @@ const CoursesView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-4">
       {settingsCourse && (
         <CourseSettingsModal
           course={settingsCourse}
@@ -428,57 +346,27 @@ const CoursesView: React.FC = () => {
         />
       )}
 
-      <header className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-800">課程管理</h2>
-        <p className="text-slate-500 text-sm mt-1">輸入課程代碼以搜尋並加入監聽列表</p>
-      </header>
-
-      {/* Add Course */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)_auto]">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">學期</label>
-            <select
-              value={selectedSemester}
-              onChange={(e) => setSelectedSemester(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {semesterOptions.length === 0 && selectedSemester && (
-                <option value={selectedSemester}>{selectedSemester}</option>
-              )}
-              {semesterOptions.map((semester) => (
-                <option key={semester.semester} value={semester.semester}>
-                  {formatSemesterLabel(semester)}{semester.current ? '（最新）' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              value={newCourseCode}
-              onChange={(e) => setNewCourseCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addCourse()}
-              placeholder="例如：CS3001 或 AB1234"
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-slate-800"
-            />
-          </div>
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-950">課程管理</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          在「課程查詢」搜尋課程後按該列的「監聽」加入；那裡看得到名額與 GPA，加之前就能判斷。
+        </p>
+        {onGoToCourseSearch && (
           <button
-            onClick={addCourse}
-            disabled={adding || !newCourseCode || !selectedSemester}
-            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            type="button"
+            onClick={onGoToCourseSearch}
+            className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            {adding ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
-            {adding ? '查詢中...' : '新增課程'}
+            <Search size={16} />
+            前往課程查詢
           </button>
-        </div>
-      </div>
+        )}
+      </section>
 
       {/* Course List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-semibold text-slate-800">已加入的課程 ({courses.length})</h3>
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+          <h3 className="text-sm font-semibold text-slate-700">監聽中的課程（{courses.length}）</h3>
         </div>
         <div className="divide-y divide-slate-100">
           {courses.length > 0 ? courses.map(course => {
@@ -585,9 +473,10 @@ const CoursesView: React.FC = () => {
               </div>
             );
           }) : (
-            <div className="p-12 text-center text-slate-500">
-              <Search className="mx-auto text-slate-300 mb-4" size={48} />
-              <p>尚未新增任何課程，請在上方輸入課程代碼</p>
+            <div className="p-12 text-center">
+              <Search className="mx-auto mb-3 text-slate-300" size={40} />
+              <p className="text-sm text-slate-500">還沒有監聽任何課程。</p>
+              <p className="mt-1 text-sm text-slate-500">到課程查詢搜尋想要的課，按該列的「監聽」就會加進來。</p>
             </div>
           )}
         </div>

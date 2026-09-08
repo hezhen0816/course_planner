@@ -9,8 +9,7 @@ import {
   XCircle,
   Zap,
   Plus,
-  PauseCircle,
-  Activity
+  PauseCircle
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { HEARTBEAT_INTERVAL_MS, HEARTBEAT_TIMEOUT_MS } from './workerStatus';
@@ -70,9 +69,34 @@ interface ProxyInfo {
   port: string;
 }
 
+/** 摘要格；沿用修課軌跡 SummaryBox 的視覺，但值可以是多行敘述。 */
+function StatBox({
+  label,
+  tone,
+  children,
+}: {
+  label: string;
+  tone: 'slate' | 'blue' | 'emerald' | 'amber';
+  children: React.ReactNode;
+}) {
+  const toneClass = {
+    slate: 'border-slate-200 bg-slate-50 text-slate-700',
+    blue: 'border-blue-200 bg-blue-50 text-blue-700',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700',
+  }[tone];
+
+  return (
+    <div className={`rounded-lg border px-4 py-3 ${toneClass}`}>
+      <p className="text-xs font-medium opacity-80">{label}</p>
+      {children}
+    </div>
+  );
+}
+
 interface DashboardViewProps {
-  onNavigate?: (tab: string) => void;
   workerOnline: boolean;
+  onGoToCourseSearch?: () => void;
 }
 
 const STATUS_POLL_INTERVAL_MS = 60_000;
@@ -83,7 +107,7 @@ const UPTIME_FREEZE_AFTER_MS = HEARTBEAT_TIMEOUT_MS;
 
 type LogTab = 'monitoring' | 'enrollment';
 
-const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ workerOnline, onGoToCourseSearch }) => {
   const logEndRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<Log[]>([]);
   const [logTab, setLogTab] = useState<LogTab>('monitoring');
@@ -533,47 +557,68 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
 
   return (
     <>
-      {/* Header — matches reference */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-slate-800">歡迎回來，同學</h2>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
-              workerStatus === 'Online'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-red-50 text-red-600 border-red-200'
-            }`}>
-              <span className={`relative flex h-2 w-2`}>
-                {workerStatus === 'Online' && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                  workerStatus === 'Online' ? 'bg-emerald-500' : 'bg-red-400'
-                }`}></span>
-              </span>
-              {workerStatus === 'Online' ? 'Worker 運行中' : 'Worker 離線'}
-            </span>
-          </div>
-          <p className="text-slate-500 text-sm mt-1">
+      {/* 頁首的 Worker 徽章已在 MonitorPage，這裡只留「現在的狀態」一句與加課入口 */}
+      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600">
             {workerStatus === 'Online' && uptimeText
-              ? `已持續運行 ${uptimeText}，目前有 ${stats.monitoringCount} 門課程正在監控中。`
+              ? `已持續運行 ${uptimeText}，${stats.monitoringCount} 門課程監控中。`
               : workerStatus === 'Offline'
-                ? `⚠ 伺服器已中斷，${stats.monitoringCount} 門課程暫停監控。`
-                : `目前有 ${stats.monitoringCount} 門課程正在監控中。`
-            }
+                ? `Worker 離線，${stats.monitoringCount} 門課程暫停監控。`
+                : `${stats.monitoringCount} 門課程監控中。`}
           </p>
+          <button
+            type="button"
+            onClick={() => onGoToCourseSearch?.()}
+            className="inline-flex items-center gap-2 self-start whitespace-nowrap rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={16} />
+            到課程查詢加入監聽
+          </button>
         </div>
-        <button
-          onClick={() => onNavigate?.('courses')}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus size={18} className="mr-2" />
-          新增監聽課程
-        </button>
-      </header>
+
+        {/* 與修課軌跡的摘要格同一套：淡色底、小標籤、2xl 數值 */}
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatBox label="監聽中課程" tone="blue">
+            <p className="mt-1 text-2xl font-semibold">{stats.monitoringCount}</p>
+          </StatBox>
+
+          <StatBox label="成功搶課次數" tone="emerald">
+            <p className="mt-1 text-2xl font-semibold">{stats.successCount}</p>
+          </StatBox>
+
+          <StatBox label="代理伺服器" tone="slate">
+            {proxyInfo === null ? (
+              <p className="mt-1 text-2xl font-semibold">—</p>
+            ) : proxyInfo.enabled ? (
+              <p
+                className="mt-1 truncate font-mono text-sm font-semibold"
+                title={`${proxyInfo.type.toUpperCase()} ${proxyInfo.host}:${proxyInfo.port}`}
+              >
+                {proxyInfo.type.toUpperCase()} {proxyInfo.host}:{proxyInfo.port}
+              </p>
+            ) : (
+              <p className="mt-1 text-2xl font-semibold">直接連線</p>
+            )}
+          </StatBox>
+
+          <StatBox label="監控狀態" tone="amber">
+            <p className="mt-1 text-sm font-semibold">
+              {checkIntervalMs !== null ? `每 ${formatIntervalSec(checkIntervalMs)} 秒檢查` : '尚未檢查'}
+            </p>
+            <p className="mt-1 text-xs opacity-80">
+              學校查詢 {schoolLatencyMs !== null ? `${schoolLatencyMs} ms` : '—'}
+              {lastCheckAgoSec !== null ? `／上次 ${lastCheckAgoSec} 秒前` : ''}
+            </p>
+            {backendLatencyMs !== null && backendLatencyMs > HEARTBEAT_STALE_WARN_MS && (
+              <p className="mt-1 text-xs font-medium">心跳延遲 {Math.floor(backendLatencyMs / 1000)} 秒</p>
+            )}
+          </StatBox>
+        </div>
+      </section>
 
       {loginPause && loginPause.until > nowMs && (
-        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+        <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
           <AlertCircle size={20} className="mt-0.5 shrink-0 text-amber-600" />
           <div className="text-sm">
             <p className="font-semibold">已暫停自動登入，帳號可能被鎖定或密碼有誤</p>
@@ -586,72 +631,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
         </div>
       )}
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-          <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center mr-4">
-            <PlaySquare className="text-blue-500" size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">監聽中課程</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.monitoringCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-          <div className="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center mr-4">
-            <CheckCircle className="text-green-500" size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">成功搶課次數</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.successCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-          <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mr-4">
-            <Activity className="text-purple-500" size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">代理伺服器</p>
-            {proxyInfo === null ? (
-              <p className="text-lg font-bold text-slate-400 mt-1">—</p>
-            ) : proxyInfo.enabled ? (
-              <p className="text-sm font-bold text-purple-600 mt-1 font-mono truncate max-w-[180px]" title={`${proxyInfo.type.toUpperCase()} ${proxyInfo.host}:${proxyInfo.port}`}>
-                {proxyInfo.type.toUpperCase()} {proxyInfo.host}:{proxyInfo.port}
-              </p>
-            ) : (
-              <p className="text-lg font-bold text-slate-400 mt-1">直接連線</p>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-          <div className="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center mr-4">
-            <Clock className="text-amber-500" size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">監控狀態</p>
-            <p className="text-xs text-slate-600 mt-1">
-              學校查詢: {schoolLatencyMs !== null ? `${schoolLatencyMs} ms` : '—'}
-            </p>
-            <p className="text-xs text-slate-600 mt-0.5">
-              檢查週期: {checkIntervalMs !== null ? `每 ${formatIntervalSec(checkIntervalMs)} 秒` : '—'}
-              {lastCheckAgoSec !== null ? `，上次 ${lastCheckAgoSec} 秒前` : '，尚未檢查'}
-            </p>
-            {backendLatencyMs !== null && backendLatencyMs > HEARTBEAT_STALE_WARN_MS && (
-              <p className="text-xs text-amber-600 mt-0.5">
-                心跳延遲 {Math.floor(backendLatencyMs / 1000)} 秒
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Two-column: Courses + Logs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Course List */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <h3 className="font-semibold text-slate-800">監聽列表</h3>
             <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
@@ -741,15 +724,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
             }) : (
               <div className="p-12 text-center text-slate-400">
                 <PlaySquare className="mx-auto text-slate-300 mb-3" size={36} />
-                <p className="text-sm font-medium">尚未新增監聽課程</p>
-                <p className="text-xs text-slate-400 mt-1">點擊右上角「新增監聽課程」開始使用</p>
+                <p className="text-sm font-medium">還沒有監聽任何課程</p>
+                <p className="mt-1 text-xs text-slate-400">到課程查詢搜尋想要的課，按該列的「監聽」加入</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Logs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[400px]">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[400px]">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
               <button

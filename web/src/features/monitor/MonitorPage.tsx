@@ -192,30 +192,28 @@ const WorkerBadge: React.FC<{ workerOnline: boolean | null }> = ({ workerOnline 
   </span>
 );
 
-export const MonitorPage: React.FC = () => {
+export const MonitorPage: React.FC<{ onGoToCourseSearch?: () => void }> = ({ onGoToCourseSearch }) => {
   const [activeTab, setActiveTab] = useState<MonitorTab>('dashboard');
   const workerOnline = useWorkerOnline();
 
-  const handleNavigate = (tab: string) => {
-    if (tab === 'dashboard' || tab === 'courses' || tab === 'settings') setActiveTab(tab);
-    else if (tab === 'proxy') setActiveTab('settings');
-  };
-
   return (
-    <div className="space-y-6 text-gray-800">
-      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900">選課監控</h1>
-            <WorkerBadge workerOnline={workerOnline} />
+    <div className="space-y-4">
+      {/* 與課程查詢／修課軌跡同一套：白卡片 + 藍色 eyebrow + text-2xl 標題 */}
+      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 p-5 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">選課監控</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold text-slate-950">名額監聽與自動加選</h1>
+              <WorkerBadge workerOnline={workerOnline} />
+            </div>
+            <p className="mt-1 text-sm text-slate-500">監控課程名額並在釋出時自動加選。Worker 在本機電腦執行，需保持開機。</p>
           </div>
-          <p className="text-sm text-slate-500 mt-1">監控課程名額並在釋出時自動加選。Worker 在本機電腦執行，需保持開機。</p>
+          <EngineToggle workerOnline={workerOnline} />
         </div>
-        <EngineToggle workerOnline={workerOnline} />
-      </header>
 
-      <div className="border-b border-slate-200">
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="border-t border-slate-100 px-5">
+          <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -231,13 +229,14 @@ export const MonitorPage: React.FC = () => {
               {tab.label}
             </button>
           ))}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {activeTab === 'dashboard' && <DashboardView onNavigate={handleNavigate} workerOnline={workerOnline === true} />}
-      {activeTab === 'courses' && <CoursesView />}
+      {activeTab === 'dashboard' && <DashboardView workerOnline={workerOnline === true} onGoToCourseSearch={onGoToCourseSearch} />}
+      {activeTab === 'courses' && <CoursesView onGoToCourseSearch={onGoToCourseSearch} />}
       {activeTab === 'settings' && (
-        <div className="space-y-12">
+        <div className="space-y-4">
           <MonitorSettingsView />
           <ProxyView />
         </div>

@@ -924,7 +924,7 @@ export default function CoursePlannerWebApp() {
           />
         )}
 
-        {activePage === 'monitor' && <MonitorPage />}
+        {activePage === 'monitor' && <MonitorPage onGoToCourseSearch={() => setActivePage('course-search')} />}
 
         {activePage === 'settings' && (
           <SettingsPage
