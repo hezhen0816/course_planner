@@ -21,6 +21,7 @@ import { PlanningWorkspace } from '../features/planning/PlanningWorkspace';
 import { usePlannerStats } from '../features/planning/usePlannerStats';
 import { useSchoolSync } from '../features/school-sync/useSchoolSync';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { MonitorPage } from '../features/monitor/MonitorPage';
 import {
   MANUAL_SET_ID,
   type ApiImportPreview,
@@ -841,6 +842,8 @@ export default function CoursePlannerWebApp() {
             onDeleteCourse={deleteSelectionCourse}
           />
         )}
+
+        {activePage === 'monitor' && <MonitorPage />}
 
         {activePage === 'settings' && (
           <SettingsPage
