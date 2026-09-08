@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 Phase 3–4：監控前端併入 Web、Web 回 Vercel、Railway 全數刪除
+
+`web/src/features/monitor/` 為 NTUST_Course_Monitor 前端的移植（儀表板、課程管理、監控設定＋代理），Navbar 新增「選課監控」；監控設定頁不再有學號密碼欄位，帳密只在「設定 → 校務帳密」（`app_private`）。Vercel 新專案 `course-compass` 連 GitHub、root `web/`、環境變數只有 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_BACKEND_URL`。建立時發現 `course-compass.vercel.app` 已被別的 Vercel 使用者佔用（curl 到的是他們的登入頁），改申請 `ntust-course-compass.vercel.app` 為正式網域；CORS 與 Supabase Auth 的 site_url／redirect 白名單（原本是 localhost:3000）都指到這個網域。用內建瀏覽器以略過登入模式確認正式站的「選課監控」頁可開。Railway 兩個專案由使用者刪除，repo 內 Railway 檔案移除。子代理移植時把 `catch (e: any)` 改成型別安全寫法並補了 `MonitorSettingsPayload` 型別，原本 SettingsView 的 `delete`／`is_encrypted` TypeScript 錯誤因此消失。
+
 ## 2026-09-08 Phase 2 結果：session 共用與帳密集中成功，登入流程合一失敗已回退
 
 成功：worker 登入後把 cookie 寫進 `app_private.school_sessions`（官方初選 API 可直接復用，不必再登入）；監控 worker 改以 `app_private.school_credentials` 為帳密來源，兩位使用者的 `user_settings` 密文已用 `scripts/monitor/migrate_monitor_credentials.py` 搬入（比對過與 legacy 解密結果一致）；`monitor/crypto.py` 改 fail-closed。失敗：把 `EnrollmentClient.login` 改為呼叫 `ntust_common.login_to_target` 後，正式環境三個帳號都登不進（一個「登入後無法進入目標頁面」、兩個 SSO 回 500），持續約 45 分鐘每 20 秒重試；回退到 monitor 原本的登入流程後第一個帳號立即成功，另兩個仍停在 SSO 登入頁，研判是被連續失敗觸發學校端鎖定或節流。因此新增「連續 3 次登入失敗暫停 15 分鐘」保護。附帶發現 `backend/config.py` 在 import 時讀環境變數，worker 必須在 import `credentials`／`school_sessions` 之前 `load_dotenv`，否則 app_private 讀取與 session 寫入在 Windows 上靜默失敗。兩套登入流程差異尚未釐清，`ntust_common` 這次的強化（CAPTCHA 偵測、回呼表單挑選、SSO 首頁視為可回復）保留給 Compass 既有呼叫端。

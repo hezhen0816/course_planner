@@ -1,6 +1,6 @@
 # NTUST_Course_Monitor 併入 Course Compass 計畫（草案，待裁示）
 
-日期：2026-09-07。狀態：已裁示 1a=A、1b=由 admin 建帳號、Web 回 Vercel；**Phase 0 已完成**（2026-09-07），Phase 1 以後待加退選結束。
+日期：2026-09-07。狀態（2026-09-08）：Phase 0–3 完成；Phase 2 的「登入流程合一」失敗回退（見 HISTORY）；Phase 4 只剩下線舊 Vercel 站與歸檔 NTUST_Course_Monitor repo（見 TODO）。正式網域 `ntust-course-compass.vercel.app`。
 
 ## 0. 目標與不做的事
 

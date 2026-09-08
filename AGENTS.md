@@ -13,7 +13,7 @@
 ## 資料與環境
 
 - 正式資料自 2026-09-07 起在與 NTUST_Course_Monitor 共用的 Supabase 專案 `NTUST_Course_Monitor_restored`（ref `eerlhmvwucnlbhemhvtz`）；舊專案 `course-compass`（`qpdvtsbqdpitreslazoe`）只保留作回退，不再寫入。schema 以 `supabase/migrations/` 為準（含 Monitor 的三張表），舊專案的歷史 migration 在 `docs/archive/supabase-migrations-old-project/` 只讀。學分規劃在 `public.user_data`，校務帳密與官方 session 密文在 `app_private.*`，同步快照在 `*_snapshots`。
-- 後端、Web 與課程監控 worker（`backend/monitor/`，2026-09-08 自 NTUST_Course_Monitor 搬入）都跑在家用 Windows 主機，經 Tailscale 提供 HTTPS；網址、部署腳本與排程器名稱見 README「Windows 後端部署」。Railway 專案仍存在且會在 push 時自動部署（`course-compass-backend` 指舊 Supabase 專案、`giving-light/worker` 是舊的監控 worker，已 `railway down`），刪除前不要依賴它們；Vercel 只剩 NTUST Monitor 的舊前端。
+- 後端、Web 與課程監控 worker（`backend/monitor/`，2026-09-08 自 NTUST_Course_Monitor 搬入）都跑在家用 Windows 主機，經 Tailscale 提供 HTTPS；網址、部署腳本與排程器名稱見 README「Windows 後端部署」。Web 的正式入口是 Vercel `https://ntust-course-compass.vercel.app`（push `main` 自動部署；Vercel 頁面呼叫後端仍需瀏覽器在 tailnet 內）；`course-compass.vercel.app` 是別人的網域。Railway 專案已於 2026-09-08 全部刪除，`backend/Procfile`、`nixpacks.toml` 已移除。NTUST Monitor 的舊 Vercel 站 `ntust-course-monitor.vercel.app` 尚未下線，其設定頁寫入的 `user_settings.student_password` 已不被 worker 採用。
 - 監控 worker 的規則（多使用者隔離、加選判定、學期回寫方向、學校端限制）沿用 NTUST_Course_Monitor 的 AGENTS.md，併入前以該檔為準；同一時間只能有一個 worker 對同一個資料庫跑，切換時先停舊的。
 - 後端只在 tailnet 內可達；同一 tailnet 內有公司帳號的 Windows 節點，因此所有校務資料 API 都必須驗 Supabase token，不可回退為選擇性驗證。
 - 對學校系統的 TLS 驗證由後端環境變數決定（預設開啟），request 內的 `verify_ssl` 一律忽略。

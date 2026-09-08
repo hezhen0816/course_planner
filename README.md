@@ -2,7 +2,7 @@
 
 這個 repo 明確分成兩條產品線與共享支援區：
 
-- `web/`：React + Vite 的課程與學分規劃 Web 版
+- `web/`：React + Vite 的課程與學分規劃 Web 版（含「選課監控」頁，原 NTUST_Course_Monitor 前端）。正式站：https://ntust-course-compass.vercel.app（Vercel，push `main` 自動部署，root 為 `web/`）；tailnet 內的 `https://hezhen.taile9e4a0.ts.net` 也提供同一份 Web
 - `ios/`：SwiftUI 原生 iPhone App
 - `backend/`：Python 同步服務
 - `supabase/`：migration 與資料庫結構
@@ -159,7 +159,7 @@ npm run ios:build
 
 ### 驗證 production backend
 
-Web 與 backend 都部署在家用 Windows 主機（見下方「Windows 後端部署」）；Railway 與 Vercel 部署已於 2026-09-06 移除。部署後用以下指令確認 production backend 已包含校務帳密、官方 session 持久化與官方初選 API：
+backend 部署在家用 Windows 主機（見下方「Windows 後端部署」）；Web 自 2026-09-08 起主要由 Vercel 提供（專案 `course-compass`，網域 `ntust-course-compass.vercel.app`；`course-compass.vercel.app` 屬於別人的專案，不要用），Windows 也同時提供一份給 tailnet。Railway 已於 2026-09-08 刪除。部署後用以下指令確認 production backend 已包含校務帳密、官方 session 持久化與官方初選 API：
 
 ```bash
 bash scripts/python.sh scripts/verify_production_backend.py
