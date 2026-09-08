@@ -18,6 +18,8 @@
 
 ## 2026-09-08 淘汰 worker 專用的 `ENCRYPTION_KEY`
 
+執行（12:54）：`--apply` 更新 3 列；部署後 worker 以新密鑰解開 resend key，兩位使用者預先登入成功；本機與 Windows `.env` 已刪 `ENCRYPTION_KEY`。舊 worker 在重啟前 4 秒內看到新密文而報「解密失敗」略過該使用者，屬預期的切換空窗。
+
 查證：`ENCRYPTION_KEY` 除了 legacy 的 `user_settings.student_password`，也加密 `smtp_password`／`resend_api_key`（正式庫 1 位使用者有 resend key），所以不能只刪讀取路徑。決策：這兩個欄位改用後端既有的 `SCHOOL_CREDENTIALS_ENCRYPTION_SECRET`（同一把 Fernet，由 `backend/credentials._fernet` 推導），整個後端只剩一把密鑰；校務密碼唯一來源為 `app_private.school_credentials`，三位使用者都已有。搬移用一次性腳本 `scripts/monitor/retire_encryption_key.py`（dry run 預設，拒絕清除沒有 app_private 帳密的列）。`rotate_encryption_key.py`、`migrate_monitor_credentials.py` 任務完成，移除。
 
 ## 2026-09-08 12:45 iOS 已驗證：改 plist 後由 xcodebuild + devicectl 裝機，登入、課表／Moodle 讀取與同步都經 tailnet 進到後端
