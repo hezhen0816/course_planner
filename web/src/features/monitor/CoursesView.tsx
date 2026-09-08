@@ -527,7 +527,7 @@ const CoursesView: React.FC = () => {
                       </p>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                      <span>人數: <span className={isAvailable ? 'text-green-600 font-medium' : 'text-slate-700'}>{course.current_enrolled}</span></span>
+                      <span>人數: <span className={isAvailable ? 'text-green-600 font-medium' : 'text-slate-700'}>{course.current_enrolled || '—'}</span></span>
                       {course.auto_enroll && (
                         <span
                           title="加選嘗試次數／上限"

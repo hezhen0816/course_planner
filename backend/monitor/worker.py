@@ -390,7 +390,10 @@ class SupabaseMonitor(CourseMonitor):
             return False
         course_code = c_data.get('course_code', '')
         try:
-            self._db_update_with_retry('monitored_courses', {'status': 'expired'}, 'id', c_data.get('id'))
+            # 一併清掉人數：停止輪詢後這個數字不會再更新，留著會被當成現況
+            self._db_update_with_retry(
+                'monitored_courses', {'status': 'expired', 'current_enrolled': None}, 'id', c_data.get('id')
+            )
         except Exception as e:
             logger.error(f"標記過期課程失敗 {course_code}：{e}")
             return False

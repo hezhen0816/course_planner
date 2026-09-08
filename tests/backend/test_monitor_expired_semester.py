@@ -20,7 +20,7 @@ def _row(semester: str) -> dict:
 def test_past_semester_is_expired_and_logged(monkeypatch) -> None:
     m = _monitor(monkeypatch)
     assert m._expire_if_past_semester(_row("1141"), "1151") is True
-    assert m._updates == [("monitored_courses", {"status": "expired"}, "row-1")]
+    assert m._updates == [("monitored_courses", {"status": "expired", "current_enrolled": None}, "row-1")]
     level, user_id, msg = m._logs[0]
     assert level == "warn" and user_id == "u1" and "1141" in msg
 
