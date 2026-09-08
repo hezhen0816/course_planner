@@ -16,10 +16,8 @@
 
 - [ ] 登入流程合一（Phase 2 未完成項）：`EnrollmentClient.login` 改用 `ntust_common.login_to_target` 在正式環境失敗（見 HISTORY 2026-09-08），需在不打正式 SSO 的前提下比對兩套流程的請求差異（表單選取、hidden 欄位、headers、redirect 順序）。在釐清前兩套並存：monitor 用自己的，Compass 呼叫端用 `ntust_common`。
 - [ ] 淘汰 `ENCRYPTION_KEY`：worker 已優先讀 `app_private`；等 Monitor 前端併入（不再寫 `user_settings.student_password`）後移除 legacy 路徑與 `rotate_encryption_key.py`。
-- [ ] `ntust-course-monitor.vercel.app` 已改為 307 轉址到新站（2026-09-08），可長期保留；使用者拿到新網址後可刪 Vercel 專案 `ntust-course-monitor` 並封存 NTUST_Course_Monitor repo。
 - [ ] 「加入監聽」按鈕放進課程查詢結果列（目前要到選課監控頁手動輸入課程代碼）。
 - [ ] 課程查詢改共用 `tr_rooms` fetcher（低優先）。
-- [ ] 舊 Supabase 專案 `qpdvtsbqdpitreslazoe` 確認一到兩週無需回退後可刪除或暫停；刪前再比對一次 `user_data` 內容。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
 - [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。
 - [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。

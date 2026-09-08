@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 名稱統一與清理
+
+Supabase 專案改名 `course-compass`（ref 不變）；Vercel 專案 `ntust-course-monitor` 刪除（使用者自行告知同學新網址，先前做的 307 轉址隨之失效）；GitHub `NTUST_Course_Monitor` 封存；Windows 上 `NTUST_Course_Monitor` 排程工作解除登記、checkout 移到 `_retired\`。本機 `course_planner` 資料夾與 `~/.venvs/course_planner` 刻意不改名（要連動腳本與設定，收益只有好看）。
+
 ## 2026-09-08 Phase 3–4：監控前端併入 Web、Web 回 Vercel、Railway 全數刪除
 
 `web/src/features/monitor/` 為 NTUST_Course_Monitor 前端的移植（儀表板、課程管理、監控設定＋代理），Navbar 新增「選課監控」；監控設定頁不再有學號密碼欄位，帳密只在「設定 → 校務帳密」（`app_private`）。Vercel 新專案 `course-compass` 連 GitHub、root `web/`、環境變數只有 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`、`VITE_BACKEND_URL`。建立時發現 `course-compass.vercel.app` 已被別的 Vercel 使用者佔用（curl 到的是他們的登入頁），改申請 `ntust-course-compass.vercel.app` 為正式網域；CORS 與 Supabase Auth 的 site_url／redirect 白名單（原本是 localhost:3000）都指到這個網域。用內建瀏覽器以略過登入模式確認正式站的「選課監控」頁可開。Railway 兩個專案由使用者刪除，repo 內 Railway 檔案移除。子代理移植時把 `catch (e: any)` 改成型別安全寫法並補了 `MonitorSettingsPayload` 型別，原本 SettingsView 的 `delete`／`is_encrypted` TypeScript 錯誤因此消失。
