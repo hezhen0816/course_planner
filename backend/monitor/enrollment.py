@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 from .config import CourseConfig
 from .env_manager import EnvManager
 from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging
+from ..ntust_common import captcha_required, is_hidden_element
 
 # 禁用 SSL 警告（如果禁用驗證）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -149,27 +150,28 @@ class EnrollmentClient:
 
         soup = BeautifulSoup(html, 'html.parser')
 
-        error_msg = soup.find('div', class_=re.compile('error|alert|warning|danger', re.I))
-        if error_msg:
+        # 登入頁把 Caps Lock 提示、欄位驗證訊息、CAPTCHA 容器都留在 DOM 裡但預設隱藏，需略過隱藏元素
+        for error_msg in soup.find_all('div', class_=re.compile('error|alert|warning|danger', re.I)):
+            if is_hidden_element(error_msg):
+                continue
             error_text = error_msg.get_text(strip=True)
             if error_text:
                 return f"登入失敗: {error_text}"
 
         validation_errors = soup.find_all('span', {'class': lambda x: x and 'field-validation-error' in str(x)})
-        error_texts = [err.get_text(strip=True) for err in validation_errors if err.get_text(strip=True)]
+        error_texts = [err.get_text(strip=True) for err in validation_errors if err.get_text(strip=True) and not is_hidden_element(err)]
         if error_texts:
             return f"登入失敗: {', '.join(error_texts)}"
 
         page_text = soup.get_text(" ", strip=True)
         if '帳號或密碼輸入錯誤' in page_text:
             return "登入失敗: 帳號或密碼錯誤"
-        if '變更密碼' in page_text and '180天' in page_text:
-            return "登入失敗: SSO 可能要求先變更密碼"
+        # 登入頁本身就有「密碼超過 180 天請變更」的常駐公告；只有登入表單消失時才是真的被要求改密碼
+        if '變更密碼' in page_text and '180天' in page_text and soup.find('input', {'name': 'Password'}) is None:
+            return "登入失敗: SSO 要求先變更密碼（密碼已超過 180 天）"
 
-        has_turnstile = bool(soup.find(attrs={'name': 'cf-turnstile-response'}))
-        has_recaptcha = bool(soup.find(attrs={'name': 'g-recaptcha-response'}))
-        has_hcaptcha = bool(soup.find(attrs={'name': 'h-captcha-response'}))
-        if has_turnstile or has_recaptcha or has_hcaptcha:
+        # 登入頁固定內含隱藏的 CAPTCHA 容器與 *-response 欄位，只看存在會把一般失敗誤判成 CAPTCHA
+        if captcha_required(soup):
             return "登入失敗: SSO 需要 CAPTCHA / 瀏覽器端驗證，requests 流程無法完成"
 
         if 'ssoam2.ntust.edu.tw' in final_url:

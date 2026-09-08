@@ -40,12 +40,40 @@ def parse_hidden_inputs(form: Tag) -> dict[str, str]:
     return values
 
 
+def is_hidden_element(tag: Tag) -> bool:
+    """True when the tag or any ancestor is not rendered by default.
+
+    Covers inline ``display:none``, the HTML ``hidden`` attribute and Vue's
+    ``v-show`` / ``v-if`` toggles — the SSO login page keeps its CAPTCHA boxes,
+    "Caps Lock is on" hint and field validation messages in the DOM but hidden.
+    """
+    node: Tag | None = tag
+    while isinstance(node, Tag):
+        style = (node.get("style") or "").replace(" ", "").lower()
+        if "display:none" in style or node.has_attr("hidden") or node.has_attr("v-show") or node.has_attr("v-if"):
+            return True
+        node = node.parent
+    return False
+
+
+def captcha_required(soup: BeautifulSoup) -> bool:
+    """True only when a CAPTCHA widget is actually rendered.
+
+    The SSO login page always ships hidden ``cf-turnstile`` / ``h-captcha`` /
+    ``g-recaptcha`` containers (``display:none``) and their ``*-response``
+    inputs; JS reveals one after repeated failures. Checking mere presence
+    therefore mislabels every ordinary failure as "needs CAPTCHA".
+    """
+    for widget in soup.find_all(class_=re.compile(r"cf-turnstile|g-recaptcha|h-captcha", re.I)):
+        if isinstance(widget, Tag) and not is_hidden_element(widget):
+            return True
+    return False
+
+
 def find_error_text(soup: BeautifulSoup) -> str | None:
     # Browser-side verification cannot be completed from requests; say so explicitly.
-    if soup.find(attrs={"name": "cf-turnstile-response"}) or soup.find(attrs={"name": "g-recaptcha-response"}) or soup.find(attrs={"name": "h-captcha-response"}):
-        has_widget = bool(soup.find(class_=re.compile(r"cf-turnstile|g-recaptcha|h-captcha", re.I)))
-        if has_widget:
-            return "SSO 需要 CAPTCHA／瀏覽器端驗證，自動登入無法完成"
+    if captcha_required(soup):
+        return "SSO 需要 CAPTCHA／瀏覽器端驗證，自動登入無法完成"
     page_text = normalize(soup.get_text(" ", strip=True))
     if "帳號或密碼輸入錯誤" in page_text:
         return "帳號或密碼錯誤"
@@ -56,11 +84,15 @@ def find_error_text(soup: BeautifulSoup) -> str | None:
         class_=re.compile(r"error|alert|warning|danger|validation", re.I),
     )
     for container in containers:
+        if not isinstance(container, Tag) or is_hidden_element(container):
+            continue
         text = normalize(container.get_text(" ", strip=True))
         if text:
             return text
 
     for node in soup.find_all(string=re.compile("帳號或密碼|incorrect|失敗|錯誤", re.I)):
+        if isinstance(node.parent, Tag) and is_hidden_element(node.parent):
+            continue
         text = normalize(str(node))
         if text:
             return text
@@ -135,11 +167,12 @@ def requires_hidden_form_callback(page_response: requests.Response) -> bool:
         return True
 
     soup = BeautifulSoup(page_response.text, "html.parser")
-    form = soup.find("form")
-    if not isinstance(form, Tag):
+    if not isinstance(soup.find("form"), Tag):
         return False
 
-    action = urljoin(page_response.url, form.get("action", ""))
+    # Scan every form (same rule as _callback_form) so a leading logout/search
+    # form does not hide the OIDC form_post callback.
+    action = urljoin(page_response.url, _callback_form(soup).get("action", ""))
     return "auth/oidc" in action or "signin-oidc" in action
 
 

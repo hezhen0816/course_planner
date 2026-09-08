@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>臺灣科技大學單一登入網站</title>
+
+    
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/lib/sweetalert2/css/sweetalert2.min.css" />
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="/lib/animate/animate.min.css" />
+
+    
+    <link rel="stylesheet" href="/css/site.css?v=DwBcMdu6R8NdZ3FAXXwBmgUeiD688cmLg70fXoRgTCk" />
+    <link rel="stylesheet" href="/css/header.css?v=dO8T1vXKbFkECML-loNt-K-B3-Os8QjunbK5_D6UIKY" />
+    <link rel="stylesheet" href="/css/footer.css?v=X8Vyte5xMB5VuDiQ8K-Dr7Oa44usAvMz4s8IxaMm-iM" />
+
+    
+
+    <link rel="stylesheet" href="/css/login.min.css?v=639244295229023481" />
+
+</head>
+
+<body class="layout-root d-flex flex-column">
+
+
+
+    
+    <main b-8nfx52m83k role="main" class="layout-body flex-grow-1">
+        
+
+
+
+
+
+
+
+    <div id="vm" class="wrapper login-page">
+
+        <header class="header d-flex align-items-start custom-header-gap">
+
+            <div class="left-panel d-flex flex-column align-items-center">
+
+                <div class="brand logo-top">
+                    <img class="logo" src="/image/intust.png" alt="臺灣科技大學校務資訊登入口">
+                </div>
+
+                <div class="boxesNoticeFont login-offsetNoticeFont">
+                </div>
+
+                <div class="boxes login-offset">
+                    <div class="loginbox">
+
+                        <form method="POST" id="loginForm" enctype="application/x-www-form-urlencoded" action="/">
+
+                            <input name="__RequestVerificationToken" type="hidden" value="TOKEN" />
+
+
+                            <div class="login">
+                                <p>帳號 Username</p>
+                                <label>
+                                    <input v-model.trim="username" v-no-fullwidth type="text" autocomplete="username" class="inputbox"
+                                           id="Username" name="Username" placeholder="請輸入帳號" required maxlength="100">
+                                    <span class="input-eng-translation left-5word" v-show="!username">Please enter your username</span>
+                                </label>
+
+
+                            </div>
+
+
+                            <div class="login">
+    <p>密碼 Password</p>
+
+    <label class="password-wrapper">
+        <input
+            :type="showPassword ? 'text' : 'password'"
+            v-model.trim="password"
+            v-no-fullwidth
+            autocomplete="current-password"
+            class="inputbox"
+            id="Password"
+            name="Password"
+            placeholder="請輸入密碼"
+            required
+            maxlength="100"
+            @keydown="checkCapsLock"
+            @keyup="checkCapsLock" />
+
+        <!-- FontAwesome 眼睛切換 -->
+<i class="fa-solid"
+   :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"
+   @click="toggleShowPassword"
+   tabindex="0"
+   aria-label="Toggle Password Visibility">
+</i>
+
+        <span class="input-eng-translation left-5word" v-show="!password">
+            Please enter your password
+        </span>
+
+        <!-- Caps Lock 提示 -->
+        <div v-show="capsLockOn" class="capslock-warning">
+            Caps Lock is on
+        </div>
+    </label>
+</div>
+
+
+                            <div>
+                                
+                            </div>
+
+
+
+                            <div id="captcha-container" class="login" style="display:none;margin-top:1rem;">
+
+                                <div id="local-captcha-container" style="display:none;">
+                                    <p>驗證碼 CAPTCHA</p>
+                                    <div style="width:90px;text-align:center" v-show="loading">
+                                        <div class="spinner-border" role="status">
+                                            <span class="sr-only">Loading...</span>
+                                        </div>
+                                    </div>
+                                    <img id="captcha-image" :src="captchaImage"
+                                         alt="驗證碼" class="img-fluid pe-auto" title="點擊刷新圖片" />
+                                    <span v-show="!loading">&nbsp;(點圖片刷新)</span>
+                                    <input type="text" class="inputbox" id="captcha" name="captcha"
+                                           placeholder="請輸入驗證碼" maxlength="5">
+                                </div>
+
+                                <div id="turnstile-container" style="display:none;">
+                                    <div class="cf-turnstile"
+                                         data-sitekey="SITEKEY"
+                                         data-theme="light"></div>
+                                </div>
+                                <input type="hidden" name="cf-turnstile-response" id="cf-turnstile-response" />
+
+                                <div id="hcaptcha-container" style="display:none;">
+                                    <div class="h-captcha" data-sitekey="SITEKEY"></div>
+                                    <input type="hidden" name="h-captcha-response" />
+                                </div>
+
+                                <div id="recaptcha-container" style="display:none;">
+                                    <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response" />
+                                </div>
+                            </div>
+
+
+
+
+                            <button type="submit" id="loginButton">登入login</button>
+                            <input type="hidden" name="ClientId" value="CourseSelection" />
+                            <input type="hidden" name="ReturnUrl" id="ReturnUrl" value="/connect/authorize?client_id=CourseSelection" />
+                            <input type="hidden" name="Uri" id="Uri" value="" />
+                        </form>
+
+
+                    </div>
+                </div>
+            </div>
+
+
+
+
+            <div class="blank" style="width:50%">
+                <div class="messagebox" v-show="announceLang === 'tw'">
+                    <p>
+                    <a class="alert-link" href="https://www.cc.ntust.edu.tw/var/file/50/1050/img/2910/change_password_20220620.pdf">
+                        ※ 預防帳號遭盜用，請定期修改密碼！
+                            </a>
+                            </p>
+                <p class="big-text">為配合教育部資安稽核計畫及行政院國家資通安全會報之政府組態基準(GCB)要求，請本校教職員工及學生<strong>自公告日(2020/10/14)起依循下列規範</strong>：</p>
+                    <ul>
+                    <li class="big-text">密碼不得少於8碼密碼，不得與上次密碼相同密碼，至少必須包含英文大寫字母、小寫字母、數字、特殊符號</li>
+                    <li class="big-text">密碼不能包含與使用者帳戶名稱三個或以上的相同字元</li>
+                    <li class="big-text">密碼不能與前三次相同</li>
+                    <li class="big-text-red">密碼有效期間為180天，180天後需再修改密碼才可使用校內各系統(系統會自動要求修改密碼)</li>
+                    <li class="big-text">密碼錯誤10次，帳號會被鎖15分鐘，15分鐘後自動解鎖</li>
+                    </ul>
+                <p class="big-text">
+                        <strong>自2020/11/2起，使用各資訊系統時，將檢核您是否已於公告日後修改密碼並符合上述規範，未修改及不符合者，均須先修改密碼才能繼續使用各系統。</strong>
+                    </p>
+                <button class="switch-lang-button" @click="announceLang='en'">English Version</button>
+                </div>
+
+                <!-- 英文公告 -->
+                <div class="messagebox" v-show="announceLang === 'en'">
+                    <p>
+                    <a class="alert-link" href="https://www.cc.ntust.edu.tw/var/file/50/1050/img/2910/change_password_20220620.pdf"> ※To protect your account , change your password periodically.
+                        </a>
+                </p>
+                    <p>
+                        In order to comply with the information security audit plan and the Government Configuration
+                        Benchmark (GCB) requirements, please change your password according to the following
+                        regulations:
+                    </p>
+                    <ol>
+                        <li>
+                            The new password must contains at least eight characters long and it's significantly different from previous passwords. The password also needs to contain uppercase letters, lowercase letters, number, and symbols. 
+                            </li>
+                        <li>
+                            Password cannot contain three or more characters that match user account name.
+                        </li>
+                        <li>
+                            The password cannot be the same as the previous three times.
+                        </li>
+                    <li class="text-red">
+                            The password is valid for 180 days, so you need to change the password again after 180 days.
+                        </li>
+                        <li>
+                            If the password is fault more over 10 times, the account will be lock 15 mins.
+                        </li>
+                    </ol>
+                    <p>
+                        Please change your password as soon as possible. <strong>
+                            From November 2nd, 2020, information
+                            systems would check whether your password has been changed and then verify to access the
+                            system.
+                        </strong>
+                        We apologize for any inconvenience.
+                    </p>
+                <button class="switch-lang-button" @click="announceLang='tw'">中文版公告</button>
+                </div>
+
+                <div class="buttonbox">
+                    <div class="buttongroup">
+                        <a class="button " href="https://www.ntust.edu.tw/" target="_blank">
+                            <img class="buttonimage" src="/image/ntust.png" alt="logo">
+                            <p>臺科大首頁<span>NTUST Home Page</span></p>
+                        </a>
+                    </div>
+
+                    <div class="buttongroup">
+                        <a class="button" href="https://i.ntust.edu.tw/AccountManagement/ForgetPassword">
+                            <img class="buttonimage" src="/image/forgot-password.png" alt="forgot password">
+                            <p>忘記密碼<span>Forgot Password</span></p>
+                        </a>
+                    </div>
+
+                    <div class="buttongroup">
+                        <a class="button" href="https://i.ntust.edu.tw/AccountManagement/ChangePassword">
+                            <img class="buttonimage" src="/image/change-password.png" alt="change password">
+                            <p>變更密碼<span>Change Password</span></p>
+                        </a>
+                    </div>
+
+                    <div class="buttongroup">
+                        <a class="button" href="https://i.ntust.edu.tw/AccountManagement/QueryAccountId">
+                            <img class="buttonimage" src="/image/forgot-account.png" alt="forgot account">
+                            <p>忘記帳號<span>Forgot Account</span></p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </header>
+
+    </div>
+
+    
+
+
+    
+
+
+    </main>
+
+
+<footer class="site-footer">
+    <div class="footer-info">
+        <img src="/image/taiwan-tech.png" class="footer-logo" />
+        <p>10607 臺北市大安區基隆路四段43號</p>
+        <p>No.43, Keelung Rd., Sec.4, Da'an Dist., Taipei City 106335, Taiwan (R.O.C.)</p>
+        <p>
+            Copyright ©2026
+            臺灣科技大學 National Taiwan University of Science And Technology
+        </p>
+
+        <span class="server-info">
+            Server: EXAMSSO1 / IP: 140.118.242.9
+        </span>
+    </div>
+</footer>
+
+<div class="site-footer-sm">
+    <div class="footer-info-sm">
+        <img src="/image/taiwan-tech.png" class="footer-logo-sm" />
+        <p>Copyright ©2026 臺灣科技大學</p>
+    </div>
+</div>
+
+
+    
+    <script src="/lib/bootstrap/dist/js/bootstrap.bundle.min.js" nonce="pmVRyn7DUNasaakzlho5Uw=="></script>
+    <script src="/lib/sweetalert2/js/sweetalert2.all.min.js" nonce="pmVRyn7DUNasaakzlho5Uw=="></script>
+    <script src="/js/site.js" nonce="pmVRyn7DUNasaakzlho5Uw=="></script>
+
+    
+    
+    <script nonce="pmVRyn7DUNasaakzlho5Uw==">
+        window.LoginConfig = {
+            GenerateCaptchaUrl: "/Account/GenerateCaptcha",
+            CaptchaProvider: "recaptchav3",
+            CaptchaEnable: "True",
+            CaptchaSiteKey: "6LeyXM4rAAAAAGwPNJFrcHFf1mQCI8sFQ3PyKKM4",
+            RequireCaptcha: "false",
+            IdleTimeoutSeconds: "300",
+            InitialPasswordChangeRequired: false,
+            InitialPasswordChangeUrl: "https://i.ntust.edu.tw/AccountManagement/ChangePassword",
+            InitialPasswordChangeMessage: "\u60A8\u5C1A\u672A\u8B8A\u66F4\u521D\u59CB\u5BC6\u78BC\uFF0C\u8ACB\u5148\u5B8C\u6210\u5BC6\u78BC\u8B8A\u66F4\u5F8C\u518D\u767B\u5165\u3002"
+        };
+    </script>
+
+
+
+
+
+
+    <script nonce="pmVRyn7DUNasaakzlho5Uw==">
+        var SystemUpdateNotice = {
+            enable: false,
+            showOncePerDay: false,
+            titleTw: "系統維護公告",
+            messageTw: "本系統將於114年10月23日(四) 18:30～20:30 進行維護，屆時服務將暫停使用。<br />請提早完成登入或作業。",
+            titleEn: "System Maintenance Notice",
+            messageEn: "The system will undergo maintenance on Oct. 23, 2025 (Thu) from 18:30 to 20:30. The service will be temporarily unavailable during this period. Please complete your login or tasks in advance."
+        };
+    </script>
+
+
+
+    
+    <script type="module" nonce="pmVRyn7DUNasaakzlho5Uw==" src="/js/login/loginPage.min.js?v=2026070601"></script>
+
+    <script type="module" nonce="pmVRyn7DUNasaakzlho5Uw==" src="/js/login/loginGlobal.min.js?v=2025112002"></script>
+
+
+    
+</body>
+</html>
