@@ -15,7 +15,6 @@
 ## P1 業務主線
 
 - [ ] `user_settings.student_password` 欄位資料已清空、`ENCRYPTION_KEY` 已淘汰（2026-09-08）；可再開一個 migration 直接移除該欄位（前端與 worker 都不再引用）。
-- [ ] 課程查詢改共用 `tr_rooms` fetcher（低優先）。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
 - [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。
 - [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。
@@ -30,7 +29,6 @@
 
 ## P2 重構／共用（2026-09-08 子代理審查 backend/monitor 與 backend 重複處，按價值排序）
 
-- [ ] 課程查詢 client：`backend/monitor/api_client.py` 與 `backend/tr_rooms.py` 各打一次 `querycourse` API；保留 `tr_rooms`（有 Origin/Referer 標頭、快取）當傳輸層，`api_client` 只留延遲與失敗旗標。
 - [ ] 學期偵測三份（`monitor/semester.py`、`tr_rooms.fetch_current_query_semester`、`api/courses.py`）：保留 `monitor/semester.py` 的驗證與候選回退，讓另外兩處呼叫它。
 - [ ] `NTUST_VERIFY_SSL` 與代理：旗標在 `config.py` 與 `monitor/api_client.py`、`monitor/enrollment.py` 各解析一次，`urllib3.disable_warnings` 呼叫兩次，代理設定在 `api_client` 與 `enrollment` 重複；做一個 `build_session(verify_ssl, proxies)`。
 - [ ] 日誌：`monitor/utils.setup_logging` 是唯一的集中設定，Compass 其他模組各自 `getLogger`；抽成 `backend/logging_setup.py`。

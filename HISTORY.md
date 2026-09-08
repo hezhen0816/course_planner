@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 監控的課程查詢改走 `tr_rooms.fetch_query_courses_filtered`
+
+`tr_rooms` 加 `session`／`timeout` 參數並抽出共用 `QUERY_COURSE_HEADERS`（含學校 API 要求的 Origin/Referer）；`api_client.search_courses` 改為薄包裝，只保留延遲指標、失敗旗標與「網路中斷重新拋出」語意，刪掉 140 行 socket.gaierror 修補與重複的例外分支。監控查詢預設含跨校課程（與原行為一致），逾時仍為 10 秒。真實 API 煙霧測試：TCG100301 書法藝術 50/50，260ms。
+
 ## 2026-09-08 淘汰 worker 專用的 `ENCRYPTION_KEY`
 
 執行（12:54）：`--apply` 更新 3 列；部署後 worker 以新密鑰解開 resend key，兩位使用者預先登入成功；本機與 Windows `.env` 已刪 `ENCRYPTION_KEY`。舊 worker 在重啟前 4 秒內看到新密文而報「解密失敗」略過該使用者，屬預期的切換空窗。

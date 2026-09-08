@@ -68,6 +68,16 @@ def fetch_current_query_semester(verify_ssl: bool) -> str:
     raise RuntimeError("課程查詢系統沒有回傳可用學期。")
 
 
+# The school API rejects requests without a browser-like Origin/Referer.
+QUERY_COURSE_HEADERS = {
+    "Accept": "application/json",
+    "Content-Type": "application/json; charset=utf-8",
+    "Origin": "https://querycourse.ntust.edu.tw",
+    "Referer": "https://querycourse.ntust.edu.tw/querycourse/",
+    "User-Agent": "Mozilla/5.0",
+}
+
+
 def fetch_query_courses(semester: str, refresh: bool, verify_ssl: bool) -> list[dict[str, Any]]:
     cached = _tr_course_cache.get(semester)
     if cached and not refresh:
@@ -78,13 +88,7 @@ def fetch_query_courses(semester: str, refresh: bool, verify_ssl: bool) -> list[
     response = requests.post(
         QUERY_COURSE_API_URL,
         json=query_course_payload(semester),
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json; charset=utf-8",
-            "Origin": "https://querycourse.ntust.edu.tw",
-            "Referer": "https://querycourse.ntust.edu.tw/querycourse/",
-            "User-Agent": "Mozilla/5.0",
-        },
+        headers=QUERY_COURSE_HEADERS,
         timeout=FULL_COURSE_LIST_TIMEOUT,
         verify=verify_ssl,
     )
@@ -107,21 +111,23 @@ def fetch_query_courses_filtered(
     course_name: str = "",
     verify_ssl: bool,
     include_cross_school: bool = False,
+    session: requests.Session | None = None,
+    timeout: float | None = None,
 ) -> list[dict[str, Any]]:
+    """Filtered course query (no cache). Single transport for Compass and the monitor worker.
+
+    ``session`` lets the monitor reuse its per-user proxied session; ``timeout``
+    lets it fail fast (it polls every few seconds and treats a timeout as one
+    missed check, not an error).
+    """
     payload = query_course_payload(semester, include_cross_school=include_cross_school)
     payload["CourseNo"] = course_no
     payload["CourseName"] = course_name
-    response = requests.post(
+    response = (session or requests).post(
         QUERY_COURSE_API_URL,
         json=payload,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json; charset=utf-8",
-            "Origin": "https://querycourse.ntust.edu.tw",
-            "Referer": "https://querycourse.ntust.edu.tw/querycourse/",
-            "User-Agent": "Mozilla/5.0",
-        },
-        timeout=DEFAULT_TIMEOUT,
+        headers=QUERY_COURSE_HEADERS,
+        timeout=timeout or DEFAULT_TIMEOUT,
         verify=verify_ssl,
     )
     response.raise_for_status()

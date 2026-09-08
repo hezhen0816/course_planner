@@ -12,7 +12,8 @@ import urllib3
 
 from .env_manager import EnvManager
 from .semester import fetch_semester_candidates, get_default_semester
-from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, handle_request_exception
+from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, _is_network_disconnected
+from ..tr_rooms import fetch_query_courses_filtered
 
 # 禁用 SSL 警告（如果禁用驗證）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -24,7 +25,6 @@ logger = setup_logging()
 class NTUSTCourseAPI:
     """NTUST 課程查詢 API 客戶端"""
     
-    BASE_URL = "https://querycourse.ntust.edu.tw/QueryCourse/api/courses"
     
     def __init__(self, verify_ssl: Optional[bool] = None, proxies: Optional[Dict] = None):
         """
@@ -217,162 +217,63 @@ class NTUSTCourseAPI:
         
         return result
     
+    SEARCH_TIMEOUT = 10  # worker polls every few seconds; a slow answer counts as one missed check
+
     def search_courses(
         self,
         semester: str = "",
         course_no: str = "",
         course_name: str = "",
-        course_teacher: str = "",
-        dimension: str = "",
-        course_notes: str = "",
-        campus_notes: str = "",
-        language: str = "zh",
-        **kwargs
+        display_name: str = "",
+        include_cross_school: bool = True,
     ) -> List[Dict]:
-        """
-        查詢課程
-        
-        Args:
-            semester: 學年期，格式如 "1142" (114學年第2學期)
-            course_no: 課程代碼
-            course_name: 課程名稱
-            course_teacher: 教師名稱
-            dimension: 向度
-            course_notes: 課程備註
-            campus_notes: 校區備註
-            language: 語言，預設 "zh"
-            **kwargs: 其他查詢參數
-        
-        Returns:
-            課程列表，每個課程為一個字典
+        """查詢課程（傳輸層共用 backend/tr_rooms.fetch_query_courses_filtered）。
+
+        回傳 [] 代表「查無資料」或「傳輸失敗」，以 last_search_failed 區分；網路中斷則重新拋出，
+        讓上層能辨識離線狀態。延遲寫入 last_request_latency_ms 供儀表板心跳使用。
         """
         if not semester:
             semester = get_default_semester(verify_ssl=self.verify_ssl)
-        payload = {
-            "Semester": semester,
-            "CourseNo": course_no,
-            "CourseName": course_name,
-            "CourseTeacher": course_teacher,
-            "Dimension": dimension,
-            "CourseNotes": course_notes,
-            "CampusNotes": campus_notes,
-            "ForeignLanguage": kwargs.get("foreign_language", 0),
-            "OnlyIntensive": kwargs.get("only_intensive", 0),
-            "OnlyGeneral": kwargs.get("only_general", 0),
-            # The school API really spells this key "OnleyNTUST"; the correctly-spelled
-            # name is ignored, which used to let cross-school sections leak into results.
-            "OnleyNTUST": kwargs.get("only_ntust", 0),
-            "OnlyMaster": kwargs.get("only_master", 0),
-            "OnlyUnderGraduate": kwargs.get("only_undergraduate", 0),
-            "OnlyNode": kwargs.get("only_node", 0),
-            "Language": language
-        }
-        
+
         self.last_search_failed = False
+        proxy_info, proxy_details = self._get_proxy_info_for_logging()
+        logger.info(
+            f"發送課程查詢 API 請求 - {proxy_info}{proxy_details} | 課程代碼: {course_no or 'N/A'}, "
+            f"課程名稱: {display_name or course_name or 'N/A'}"
+        )
+        req_start = time.perf_counter()
         try:
-            req_start = time.perf_counter()
-            # 記錄代理使用狀態（總是記錄，不只是 debug 模式）
-            proxy_info, proxy_details = self._get_proxy_info_for_logging()
-            
-            # 決定日誌中顯示的課程名稱
-            log_course_name = kwargs.get('display_name') or course_name or 'N/A'
-            logger.info(f"發送課程查詢 API 請求 - {proxy_info}{proxy_details} | 課程代碼: {course_no or 'N/A'}, 課程名稱: {log_course_name}")
-            
-            # 檢查 socket 異常類是否可用（用於調試）
-            try:
-                import socket
-                has_gaierror = hasattr(socket, 'gaierror')
-                logger.debug(f"Socket 異常類檢查 - gaierror 可用: {has_gaierror}")
-            except:
-                pass
-            
-            response = self.session.post(
-                self.BASE_URL,
-                json=payload,
-                timeout=10,
-                verify=self.verify_ssl
+            courses = fetch_query_courses_filtered(
+                semester,
+                course_no=course_no,
+                course_name=course_name,
+                verify_ssl=self.verify_ssl,
+                include_cross_school=include_cross_school,
+                session=self.session,
+                timeout=self.SEARCH_TIMEOUT,
             )
-            self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            response.raise_for_status()
-            
-            # 記錄成功響應（包含代理使用信息）
-            logger.info(f"課程查詢 API 請求成功 - {proxy_info}{proxy_details} | 返回 {len(response.json()) if response.json() else 0} 個課程")
-            
-            return response.json()
         except requests.exceptions.SSLError as e:
             self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            error_msg = str(e)
-            logger.error(f"SSL 證書驗證錯誤: {error_msg}")
-            logger.info("可能的解決方案：")
-            logger.info("1. 設定環境變數禁用 SSL 驗證（不推薦）：")
-            logger.info("   export NTUST_VERIFY_SSL=false")
-            logger.info("   或在 Windows: set NTUST_VERIFY_SSL=false")
-            logger.info("2. 更新 Python 的證書庫：")
-            logger.info("   macOS: /Applications/Python\\ 3.x/Install\\ Certificates.command")
-            logger.info("   或執行: pip install --upgrade certifi")
-            logger.info("3. 如果確定要禁用驗證，可以在程式中設定 verify_ssl=False")
-            self.last_search_failed = True
-            return []
-        except requests.exceptions.Timeout as e:
-            self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            from .utils import _is_network_disconnected
-            if _is_network_disconnected(e):
-                logger.error(f"API 請求超時：當前網路已中斷 - {e}")
-                # 重新拋出異常，讓上層能夠檢測到網路中斷
-                raise
-            else:
-                logger.error(f"API 請求超時: {e}")
-            self.last_search_failed = True
-            return []
-        except requests.exceptions.ConnectionError as e:
-            self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            from .utils import _is_network_disconnected
-            # 檢查是否是 socket.gaierror 相關錯誤
-            error_str = str(e)
-            if _is_network_disconnected(e):
-                logger.error(f"API 連接錯誤：當前網路已中斷 - {e}")
-                # 重新拋出異常，讓上層能夠檢測到網路中斷
-                raise
-            elif 'gaierror' in error_str.lower() or 'socket' in error_str.lower():
-                logger.error(f"API 連接錯誤（可能是 socket 異常類問題）: {e}")
-                logger.debug(f"錯誤類型: {type(e)}, 錯誤詳情: {error_str}")
-            else:
-                logger.error(f"API 連接錯誤: {e}")
+            logger.error(f"SSL 證書驗證錯誤: {e}（可在監控設定關閉 SSL 驗證，或更新 certifi）")
             self.last_search_failed = True
             return []
         except requests.exceptions.RequestException as e:
             self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            from .utils import _is_network_disconnected
-            error_str = str(e)
             if _is_network_disconnected(e):
-                logger.error(f"API 請求錯誤：當前網路已中斷 - {e}")
-                # 重新拋出異常，讓上層能夠檢測到網路中斷
-                raise
-            elif 'gaierror' in error_str.lower():
-                logger.error(f"API 請求錯誤（socket.gaierror 問題）: {e}")
-                logger.debug(f"錯誤類型: {type(e)}, 錯誤詳情: {error_str}")
-            else:
-                logger.error(f"API 請求錯誤: {e}")
+                logger.error(f"API 請求失敗：當前網路已中斷 - {e}")
+                raise  # 讓上層辨識離線，不當成查無資料
+            logger.error(f"API 請求失敗: {e}")
             self.last_search_failed = True
             return []
-        except AttributeError as e:
+        except RuntimeError as e:  # 回傳格式不是清單
             self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
-            # 捕獲可能的 socket.gaierror 屬性錯誤
-            error_str = str(e)
-            if 'gaierror' in error_str.lower():
-                logger.error(f"API 請求錯誤（socket.gaierror 屬性不存在）: {e}")
-                logger.debug(f"錯誤類型: {type(e)}, 錯誤詳情: {error_str}")
-                # 嘗試修復：恢復 socket 異常類
-                try:
-                    import socket
-                    if hasattr(socket, '_original_gaierror') and socket._original_gaierror:
-                        socket.gaierror = socket._original_gaierror
-                        logger.info("已嘗試恢復 socket.gaierror")
-                except:
-                    pass
+            logger.error(f"API 回傳異常: {e}")
             self.last_search_failed = True
             return []
-    
+        self.last_request_latency_ms = (time.perf_counter() - req_start) * 1000
+        logger.info(f"課程查詢 API 請求成功 - {proxy_info}{proxy_details} | 返回 {len(courses)} 個課程")
+        return courses
+
     def get_course_by_code(self, course_no: str, semester: str = "", course_name: str = "") -> Optional[Dict]:
         """
         根據課程代碼查詢單一課程
