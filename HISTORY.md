@@ -16,6 +16,16 @@
 
 ---
 
+## 2026-09-08 登入流程合一：查出 Phase 2 失敗的真正原因是進入點，不是 POST
+
+查證方式：匿名抓 SSO 登入頁，離線讓兩套解析器各自組 POST（URL、欄位完全相同，都是 POST 到 `https://ssoam2.ntust.edu.tw/`）；再用使用者授權的帳號 B11430207 各實登一次並記錄每一跳。結果：
+- 共用流程以 `/First/A06/A06` 進入，登入回來被導回 A06，但選課系統只在 `/Account/OpenIDCallback → /Home/Index` 這條路才建立 `ASP.NET_SessionId`；A06 看不到 session 就轉 `/Account/Logout`，連 SSO session 一起登出，之後再取目標頁自然回到登入頁（即「登入後無法進入目標頁面」）。monitor 從根目錄 `/` 進入所以沒事。
+- 第二個 bug：`requires_hidden_form_callback` 用「URL 含 signin-oidc」判斷，登入頁的 ReturnUrl 就含這字串，導致把空白登入表單再 POST 一次。改看 URL path。
+- 兩個帳號的 500 是 SSO 端對該帳號回錯誤頁（POST 後 302 到根目錄回 500），與流程無關，至今仍是。
+- 附帶：登入頁固定內含隱藏的 CAPTCHA 容器、`v-show` 的 Caps Lock 提示與 180 天改密碼公告，兩套流程的錯誤判讀都會誤報；已改為只看實際顯示的元素。
+
+做法：`login_to_target` 加 `entry_url`（monitor 傳站台根目錄；Moodle、成績頁呼叫端不變），`EnrollmentClient._login_once` 改呼叫它並保留速率限制、冷卻與網路錯誤訊息；刪掉 monitor 自己的 OIDC 回呼提交。實登結果 10 跳、2.7 秒成功，經 OpenIDCallback 建立 session。留下 `tests/fixtures/sso/login_page.html`（token 與 sitekey 已去除）做回歸。
+
 ## 2026-09-08 收掉 2026-09-06 審查的四項安全問題；順便查出待處理課程解析一直失敗
 
 - `api_client` 不再把整個 proxies dict（含代理密碼）寫進日誌，改用只含主機的 `get_proxy_info_for_logging`。

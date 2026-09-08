@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -163,7 +163,10 @@ def submit_hidden_form(
 
 
 def requires_hidden_form_callback(page_response: requests.Response) -> bool:
-    if "signin-oidc" in page_response.url:
+    # Match the path only: the SSO login page's ReturnUrl query string also
+    # contains "signin-oidc", and treating that page as a callback would POST
+    # the empty login form back to SSO.
+    if urlparse(page_response.url).path.rstrip("/").endswith("/signin-oidc"):
         return True
 
     soup = BeautifulSoup(page_response.text, "html.parser")
@@ -182,9 +185,21 @@ def login_to_target(
     password: str,
     target_url: str,
     verify_ssl: bool,
+    entry_url: str | None = None,
 ) -> requests.Response:
+    """Log in through SSO and return the target page.
+
+    ``entry_url`` is the page used to start the OIDC handshake. The course
+    selection site must be entered at its root: after ``signin-oidc`` it goes
+    through ``/Account/OpenIDCallback`` → ``/Home/Index`` and only then creates
+    its own ``ASP.NET_SessionId``; entering at a deep page (e.g. ``/First/A06/A06``)
+    lands there without that session and the page redirects to ``/Account/Logout``,
+    which also kills the SSO session. Defaults to ``target_url`` for sites that
+    do not have this quirk (Moodle, score history).
+    """
+    handshake_url = entry_url or target_url
     entry_response = session.get(
-        target_url,
+        handshake_url,
         timeout=DEFAULT_TIMEOUT,
         allow_redirects=True,
         verify=verify_ssl,
@@ -192,7 +207,13 @@ def login_to_target(
     entry_response.raise_for_status()
 
     if "ssoam" not in entry_response.url:
-        return entry_response
+        if handshake_url == target_url:
+            return entry_response
+        page_response = session.get(target_url, timeout=DEFAULT_TIMEOUT, allow_redirects=True, verify=verify_ssl)
+        page_response.raise_for_status()
+        if "ssoam" not in page_response.url:
+            return page_response
+        entry_response = page_response
 
     soup = BeautifulSoup(entry_response.text, "html.parser")
     form = first_form(soup)

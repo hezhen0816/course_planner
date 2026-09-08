@@ -80,3 +80,73 @@ def test_callback_detection_scans_past_a_leading_non_oidc_form() -> None:
     """
     resp = _Resp(html, "https://ssoam2.ntust.edu.tw/connect/authorize/callback")
     assert nc.requires_hidden_form_callback(resp) is True
+
+
+def test_login_page_with_signin_oidc_in_return_url_is_not_a_callback() -> None:
+    url = (
+        "https://ssoam2.ntust.edu.tw/account/login?ReturnUrl=%2Fconnect%2Fauthorize%3Fclient_id%3DCourseSelection"
+        "%26redirect_uri%3Dhttps%253A%252F%252Fcourseselection.ntust.edu.tw%252Fsignin-oidc"
+    )
+    assert nc.requires_hidden_form_callback(_Resp(FIXTURE.read_text(encoding="utf-8"), url)) is False
+    assert nc.requires_hidden_form_callback(_Resp("<html></html>", "https://courseselection.ntust.edu.tw/signin-oidc")) is True
+
+
+class _ChainSession:
+    """Replays the real course-selection handshake: root entry → SSO → callback → Home, then target."""
+
+    LOGIN_PAGE = FIXTURE.read_text(encoding="utf-8")
+    CALLBACK_PAGE = '<form method="post" action="https://courseselection.ntust.edu.tw/signin-oidc"><input type="hidden" name="code" value="c"></form>'
+
+    def __init__(self):
+        self.calls: list[tuple[str, str]] = []
+        self.logged_in = False
+
+    def get(self, url, **kw):
+        self.calls.append(("GET", url))
+        if url == "https://courseselection.ntust.edu.tw/":
+            if self.logged_in:
+                return _Resp("<html>home</html>", "https://courseselection.ntust.edu.tw/Home/Index")
+            return _Resp(self.LOGIN_PAGE, LOGIN_URL)
+        if url == "https://courseselection.ntust.edu.tw/First/A06/A06":
+            if self.logged_in:
+                return _Resp("<html>home</html>", "https://courseselection.ntust.edu.tw/Home/Index")
+            return _Resp(self.LOGIN_PAGE, LOGIN_URL)
+        raise AssertionError(url)
+
+    def post(self, url, data, **kw):
+        self.calls.append(("POST", url))
+        if url == "https://ssoam2.ntust.edu.tw/":
+            assert data["Username"] == "U" and data["Password"] == "P"
+            return _Resp(self.CALLBACK_PAGE, "https://ssoam2.ntust.edu.tw/connect/authorize?client_id=CourseSelection")
+        if url == "https://courseselection.ntust.edu.tw/signin-oidc":
+            self.logged_in = True
+            return _Resp("<html>home</html>", "https://courseselection.ntust.edu.tw/Home/Index")
+        raise AssertionError(url)
+
+
+def _patch_raise(monkeypatch):
+    monkeypatch.setattr(_Resp, "raise_for_status", lambda self: None, raising=False)
+
+
+def test_login_to_target_uses_entry_url_for_the_handshake_then_fetches_target(monkeypatch) -> None:
+    _patch_raise(monkeypatch)
+    session = _ChainSession()
+    page = nc.login_to_target(session, "U", "P", "https://courseselection.ntust.edu.tw/First/A06/A06", False,
+                              entry_url="https://courseselection.ntust.edu.tw/")
+    assert page.url == "https://courseselection.ntust.edu.tw/Home/Index"
+    assert [c for c in session.calls] == [
+        ("GET", "https://courseselection.ntust.edu.tw/"),
+        ("POST", "https://ssoam2.ntust.edu.tw/"),
+        ("POST", "https://courseselection.ntust.edu.tw/signin-oidc"),
+        ("GET", "https://courseselection.ntust.edu.tw/First/A06/A06"),
+    ]
+
+
+def test_login_to_target_skips_sso_when_entry_already_logged_in(monkeypatch) -> None:
+    _patch_raise(monkeypatch)
+    session = _ChainSession()
+    session.logged_in = True
+    page = nc.login_to_target(session, "U", "P", "https://courseselection.ntust.edu.tw/First/A06/A06", False,
+                              entry_url="https://courseselection.ntust.edu.tw/")
+    assert page.url.endswith("/Home/Index")
+    assert all(m == "GET" for m, _ in session.calls)

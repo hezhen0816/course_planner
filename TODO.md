@@ -9,13 +9,13 @@
 
 ## P0 正確性／阻斷性
 
+- [ ] 登入流程已合一（2026-09-08，`EnrollmentClient.login` → `ntust_common.login_to_target(entry_url=站台根目錄)`，本機用 B11430207 實登成功一次），待與下列一起部署 Windows worker；部署後看 `ntust_monitor.log` 的「預先登入成功」是否持續。
 - [ ] SSO 鎖定保護的儀表板警示已寫好（2026-09-08：`user_settings.login_paused_until/login_pause_reason`、worker 冷卻時寫入並在重啟後沿用、儀表板橫幅），待 `supabase db push`、push `main`、Windows 重佈；之後等 heij82351／bocho960321 再觸發一次冷卻，確認橫幅出現。
 - [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
 - [ ] 手機 App 尚未實測 https 路徑：Xcode 27 Beta 6 裝機成功，但還沒從後端 log 看到手機經 `hezhen.taile9e4a0.ts.net` 的請求；請使用者開 Tailscale 後同步一次並確認。
 
 ## P1 業務主線
 
-- [ ] 登入流程合一（Phase 2 未完成項）：`EnrollmentClient.login` 改用 `ntust_common.login_to_target` 在正式環境失敗（見 HISTORY 2026-09-08），需在不打正式 SSO 的前提下比對兩套流程的請求差異（表單選取、hidden 欄位、headers、redirect 順序）。在釐清前兩套並存：monitor 用自己的，Compass 呼叫端用 `ntust_common`。
 - [ ] 淘汰 `ENCRYPTION_KEY`（條件已成立：前端已不再寫 `user_settings.student_password`）：移除 worker 的 legacy 讀取路徑、`scripts/monitor/rotate_encryption_key.py`、`.env` 與 Windows `.env` 的 `ENCRYPTION_KEY`，並清掉 `user_settings.student_password` 欄位資料。
 - [ ] 「加入監聽」按鈕放進課程查詢結果列（目前要到選課監控頁手動輸入課程代碼）。
 - [ ] 課程查詢改共用 `tr_rooms` fetcher（低優先）。
@@ -35,7 +35,6 @@
 
 ## P2 重構／共用（2026-09-08 子代理審查 backend/monitor 與 backend 重複處，按價值排序）
 
-- [ ] 監控端登入流程與 `ntust_common` 合一（見 P1「登入流程合一」）；合一前 `ntust_common.submit_hidden_form` 已改為挑 OIDC 回呼表單、`find_error_text` 已能辨識 CAPTCHA／帳密錯誤／密碼過期。
 - [ ] 課程查詢 client：`backend/monitor/api_client.py` 與 `backend/tr_rooms.py` 各打一次 `querycourse` API；保留 `tr_rooms`（有 Origin/Referer 標頭、快取）當傳輸層，`api_client` 只留延遲與失敗旗標。
 - [ ] 學期偵測三份（`monitor/semester.py`、`tr_rooms.fetch_current_query_semester`、`api/courses.py`）：保留 `monitor/semester.py` 的驗證與候選回退，讓另外兩處呼叫它。
 - [ ] Supabase 連線與環境變數名稱：worker 用 SDK 讀 `VITE_SUPABASE_URL`，Compass 用手刻 PostgREST 讀 `SUPABASE_URL`；統一到 `backend/config.py`，且 worker 缺 service role key 時應直接失敗而不是退回 anon key。
