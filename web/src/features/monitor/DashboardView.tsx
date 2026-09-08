@@ -95,6 +95,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
   const [backendLatencyMs, setBackendLatencyMs] = useState<number | null>(null);
   const [schoolLatencyMs, setSchoolLatencyMs] = useState<number | null>(null);
   const [checkIntervalMs, setCheckIntervalMs] = useState<number | null>(null);
+  const [loginPause, setLoginPause] = useState<{ until: number; reason: string } | null>(null);
   // 1s clock so "上次檢查 N 秒前" keeps moving between course refreshes.
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const currentUserIdRef = useRef<string | null>(null);
@@ -427,7 +428,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
 
     const { data } = await supabase
       .from('user_settings')
-      .select('check_interval, proxy_enabled, proxy_type, proxy_host, proxy_port')
+      .select('check_interval, proxy_enabled, proxy_type, proxy_host, proxy_port, login_paused_until, login_pause_reason')
       .eq('user_id', user.id)
       .single();
     if (data) {
@@ -439,6 +440,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
         host: data.proxy_host ?? '',
         port: data.proxy_port ?? '',
       });
+      const pausedUntil = data.login_paused_until ? new Date(data.login_paused_until).getTime() : 0;
+      setLoginPause(pausedUntil > Date.now() ? { until: pausedUntil, reason: data.login_pause_reason ?? '' } : null);
     }
   };
 
@@ -567,6 +570,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
           新增監聽課程
         </button>
       </header>
+
+      {loginPause && loginPause.until > nowMs && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <AlertCircle size={20} className="mt-0.5 shrink-0 text-amber-600" />
+          <div className="text-sm">
+            <p className="font-semibold">已暫停自動登入，帳號可能被鎖定或密碼有誤</p>
+            <p className="mt-1">
+              連續登入失敗達上限，Worker 已暫停自動登入約 {Math.max(1, Math.ceil((loginPause.until - nowMs) / 60000))} 分鐘（至 {new Date(loginPause.until).toLocaleTimeString()}）以保護帳號。
+              請先用瀏覽器登入 <a className="underline" href="https://courseselection.ntust.edu.tw" target="_blank" rel="noreferrer">選課系統</a> 確認帳密與 SSO 是否正常，必要時到「設定」更新校務密碼。
+            </p>
+            {loginPause.reason && <p className="mt-1 text-xs text-amber-700">最後錯誤：{loginPause.reason}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

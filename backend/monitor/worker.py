@@ -24,6 +24,20 @@ from .enrollment import EnrollmentClient
 from .semester import get_default_semester
 from .utils import setup_logging
 from .crypto import CryptoManager
+
+
+def _parse_ts(value: Any) -> Optional[float]:
+    """ISO 8601 字串（PostgREST 輸出）轉 epoch 秒；空值或格式錯誤回 None。"""
+    if not value:
+        return None
+    try:
+        text = str(value).replace('Z', '+00:00')
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except (ValueError, TypeError):
+        return None
 from ..credentials import get_school_credentials_secret, CredentialStoreError
 from ..school_sessions import save_school_session_state, session_state_from_requests_session
 
@@ -342,6 +356,7 @@ class SupabaseMonitor(CourseMonitor):
                         'enrollment_open_start': (settings.get('enrollment_open_start') or '').strip() or None,
                         'enrollment_open_end': (settings.get('enrollment_open_end') or '').strip() or None,
                         'enrollment_period': (settings.get('enrollment_period') or 'A06').strip() or 'A06',  # A06=電腦抽選後選課, B01=加退選課
+                        'login_paused_until': settings.get('login_paused_until'),
                         # Proxy settings
                         'proxy_enabled': settings.get('proxy_enabled', False),
                         'proxy_type': str(settings.get('proxy_type') or 'socks5'),
@@ -479,6 +494,25 @@ class SupabaseMonitor(CourseMonitor):
                 logger.error(f"更新課程資料失敗 {course.alias}：{e}")
                 
         return success
+
+    def _set_login_pause(self, user_id: str, until_ts: Optional[float], reason: str) -> None:
+        """把自動登入冷卻狀態寫進 user_settings，並留一筆日誌讓儀表板顯示。"""
+        if until_ts:
+            until_iso = datetime.fromtimestamp(until_ts, tz=timezone.utc).isoformat()
+            data = {'login_paused_until': until_iso, 'login_pause_reason': (reason or '')[:500]}
+            minutes = max(1, int((until_ts - time.time()) // 60))
+            self._write_log(
+                f"⚠ 連續登入失敗 {EnrollmentClient.LOGIN_FAILURE_COOLDOWN_AFTER} 次，已暫停自動登入 {minutes} 分鐘以保護帳號不被鎖定。"
+                f"請先用瀏覽器登入選課系統確認帳密與 SSO 狀態。最後錯誤：{reason}",
+                level='warn', user_id=user_id,
+            )
+        else:
+            data = {'login_paused_until': None, 'login_pause_reason': None}
+            self._write_log("自動登入已恢復（登入成功，冷卻解除）", level='info', user_id=user_id)
+        try:
+            self._db_update_with_retry('user_settings', data, 'user_id', user_id)
+        except Exception as e:
+            logger.error(f"寫入登入暫停狀態失敗（uid={user_id[:8]}）：{e}")
 
     def _sync_attempt_count_from_db(self, user_id: str, course: CourseConfig) -> None:
         """以資料庫的 attempt_count 校正記憶體中的嘗試次數。
@@ -741,6 +775,12 @@ class SupabaseMonitor(CourseMonitor):
                     user_monitor.enrollment_client = EnrollmentClient(verify_ssl=verify_ssl)
                     if proxies:
                         user_monitor.enrollment_client.session.proxies = proxies
+                    user_monitor.enrollment_client.on_login_pause = (
+                        lambda until, reason, _uid=user_id: user_monitor._set_login_pause(_uid, until, reason)
+                    )
+                    user_monitor.enrollment_client.seed_login_cooldown(
+                        _parse_ts(cached_user_data.get('login_paused_until'))
+                    )
                     user_monitor.enrollment_clients_per_user[user_id] = user_monitor.enrollment_client
 
                 user_monitor.enrollment_attempts = user_monitor.enrollment_attempts_per_user.get(user_id, {})

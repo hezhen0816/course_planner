@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 自動登入冷卻狀態持久化並顯示在儀表板
+
+做法：`EnrollmentClient` 冷卻觸發／解除時呼叫 `on_login_pause` 回呼，worker 把到期時間與最後錯誤寫進 `user_settings.login_paused_until/login_pause_reason` 並寫一筆 `warn` 日誌；worker 重啟時從同欄位還原冷卻（否則重啟等於清零，帳號鎖定保護失效）。儀表板在到期前顯示黃色橫幅，導引使用者先用瀏覽器登入選課系統確認。否決把狀態只寫進 `system_logs`：前端要從日誌反推「目前是否暫停」不可靠，也無法在重啟後還原。
+
 ## 2026-09-08 加選嘗試次數改存資料庫；查出正式庫缺 `max_attempts`／`reset_attempts` 欄位
 
 查證：以 service key 讀 `monitored_courses` 一列，正式庫只有 baseline migration 的 10 個欄位，沒有前端與 worker 都在用的 `max_attempts`、`reset_attempts`（兩者從未進 migration）。前端「課程設定」存檔與「重設次數」因此一直回 PostgREST 欄位不存在錯誤；worker 用 `.get` 預設值所以沒察覺。

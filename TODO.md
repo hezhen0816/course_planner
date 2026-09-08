@@ -9,7 +9,7 @@
 
 ## P0 正確性／阻斷性
 
-- [ ] 監控 worker 的 SSO 鎖定保護只做了一半：連續 3 次失敗會暫停 15 分鐘（`backend/monitor/enrollment.py`），但儀表板沒有顯示「已暫停自動登入／帳號可能被鎖」的警示，使用者看不出來。
+- [ ] SSO 鎖定保護的儀表板警示已寫好（2026-09-08：`user_settings.login_paused_until/login_pause_reason`、worker 冷卻時寫入並在重啟後沿用、儀表板橫幅），待 `supabase db push`、push `main`、Windows 重佈；之後等 heij82351／bocho960321 再觸發一次冷卻，確認橫幅出現。
 - [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
 - [ ] 手機 App 尚未實測 https 路徑：Xcode 27 Beta 6 裝機成功，但還沒從後端 log 看到手機經 `hezhen.taile9e4a0.ts.net` 的請求；請使用者開 Tailscale 後同步一次並確認。
 

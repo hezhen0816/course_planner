@@ -12,7 +12,7 @@ import time
 import threading
 from collections import deque
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -86,6 +86,10 @@ class EnrollmentClient:
         self.last_login_time = None
         self.last_enroll_time = None
         self._rate_limit_lock = threading.Lock()
+        self._login_failures = 0
+        self._login_cooldown_until = 0.0
+        # 冷卻狀態變化回呼：(until_ts 或 None, reason)。None 代表冷卻解除。
+        self.on_login_pause: Optional[Callable[[Optional[float], str], None]] = None
         # repo root (backend/monitor/enrollment.py -> three levels up)
         _repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self._response_log_dir = os.path.join(_repo_root, 'logs', 'enrollment_responses')
@@ -375,23 +379,40 @@ class EnrollmentClient:
     LOGIN_FAILURE_COOLDOWN_AFTER = 3        # consecutive failures before pausing
     LOGIN_FAILURE_COOLDOWN_SECONDS = 15 * 60
 
-    def _record_login_result(self, success: bool) -> None:
+    def seed_login_cooldown(self, until_ts: Optional[float]) -> None:
+        """從持久儲存還原冷卻（worker 重啟後沿用），過期的值忽略。"""
+        if not until_ts or until_ts <= time.time():
+            return
+        with self._rate_limit_lock:
+            self._login_cooldown_until = max(self._login_cooldown_until, float(until_ts))
+
+    def _record_login_result(self, success: bool, message: str = '') -> None:
+        event: Optional[Tuple[Optional[float], str]] = None
         with self._rate_limit_lock:
             if success:
+                had_pause = self._login_cooldown_until > 0.0 or self._login_failures > 0
                 self._login_failures = 0
                 self._login_cooldown_until = 0.0
-                return
-            self._login_failures = getattr(self, '_login_failures', 0) + 1
-            if self._login_failures >= self.LOGIN_FAILURE_COOLDOWN_AFTER:
-                self._login_cooldown_until = time.time() + self.LOGIN_FAILURE_COOLDOWN_SECONDS
-                self._login_failures = 0
-                logger.warning(f"連續登入失敗 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {self.LOGIN_FAILURE_COOLDOWN_SECONDS // 60} 分鐘")
+                if had_pause:
+                    event = (None, '')
+            else:
+                self._login_failures += 1
+                if self._login_failures >= self.LOGIN_FAILURE_COOLDOWN_AFTER:
+                    self._login_cooldown_until = time.time() + self.LOGIN_FAILURE_COOLDOWN_SECONDS
+                    self._login_failures = 0
+                    logger.warning(f"連續登入失敗 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {self.LOGIN_FAILURE_COOLDOWN_SECONDS // 60} 分鐘")
+                    event = (self._login_cooldown_until, message)
+        if event is not None and self.on_login_pause is not None:
+            try:
+                self.on_login_pause(*event)
+            except Exception as e:  # 回呼失敗不影響登入流程
+                logger.warning(f"登入冷卻回呼失敗：{e}")
 
     def login(self, username: str, password: str) -> Tuple[bool, str]:
         success, message = self._login_once(username, password)
         # 速率限制／冷卻中的拒絕不是 SSO 的判定，不計入連續失敗
         if not (not success and ('間隔' in message or '限制' in message or '暫停自動登入' in message)):
-            self._record_login_result(success)
+            self._record_login_result(success, message)
         return success, message
 
     def _login_once(self, username: str, password: str) -> Tuple[bool, str]:
@@ -415,7 +436,7 @@ class EnrollmentClient:
         # 連續登入失敗保護：學校規定密碼錯 10 次鎖 15 分鐘；連續失敗達門檻就暫停 15 分鐘，
         # 避免 worker 把帳號打到鎖住。成功一次即重置。
         with self._rate_limit_lock:
-            cooldown_until = getattr(self, '_login_cooldown_until', 0.0)
+            cooldown_until = self._login_cooldown_until
         if cooldown_until > time.time():
             remaining = int(cooldown_until - time.time())
             return False, f"連續登入失敗已達 {self.LOGIN_FAILURE_COOLDOWN_AFTER} 次，暫停自動登入 {remaining // 60} 分 {remaining % 60} 秒（保護帳號不被鎖定）"
