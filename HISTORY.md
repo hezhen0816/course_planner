@@ -16,6 +16,11 @@
 
 ---
 
+## 2026-09-08 GPA 密鑰改存 app_private，查詢加快取與 429 退避
+
+問題：myNTUST token 明文存在 `public.user_data.content.settings.gpaApi`（使用者自己的 session 就讀得到，且會隨資料同步四處流動），前端還把它塞進 `X-GPA-API-Key` 標頭；一次搜尋 30 筆就打 30 次 API（限速 120 次/分）。正式庫只有 1 位使用者設定過（B11430207，62 字元）。
+做法：新增 `app_private.gpa_api_keys` 與三個 service_role RPC，沿用校務帳密同一把 Fernet；新增 `/api/gpa-api-key`（GET/PUT/DELETE，只回報是否已保存）；課程查詢改由 `Authorization` 取出密鑰於後端解密使用，`X-GPA-API-Key` 移除。查詢改 `fetch_course_gpas`：課程代碼去重、程序內共用 24 小時快取（GPA 與使用者無關）、最多 4 條併發、收到 429 就依 `Retry-After` 暫停整批並回 `rate_limited`；`error` 不進快取以免暫時故障被記一天。查證：myNTUST 沒有公開的批次端點，所以「批次」以去重＋快取＋限流併發實作，而非單一批次請求。
+
 ## 2026-09-08 監控的課程查詢改走 `tr_rooms.fetch_query_courses_filtered`
 
 `tr_rooms` 加 `session`／`timeout` 參數並抽出共用 `QUERY_COURSE_HEADERS`（含學校 API 要求的 Origin/Referer）；`api_client.search_courses` 改為薄包裝，只保留延遲指標、失敗旗標與「網路中斷重新拋出」語意，刪掉 140 行 socket.gaierror 修補與重複的例外分支。監控查詢預設含跨校課程（與原行為一致），逾時仍為 10 秒。真實 API 煙霧測試：TCG100301 書法藝術 50/50，260ms。

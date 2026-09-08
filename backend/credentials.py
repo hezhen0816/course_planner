@@ -291,6 +291,79 @@ def _delete_school_credentials_row(user_id: str) -> None:
     response.raise_for_status()
 
 
+def _load_gpa_api_key_row(user_id: str) -> dict[str, Any] | None:
+    response = requests.post(
+        f"{SUPABASE_URL}/rest/v1/rpc/get_gpa_api_key",
+        headers=_service_role_headers(json_body=True),
+        json={"p_user_id": user_id},
+        timeout=DEFAULT_TIMEOUT,
+    )
+    response.raise_for_status()
+    rows = response.json()
+    if isinstance(rows, list):
+        return rows[0] if rows else None
+    return rows if isinstance(rows, dict) else None
+
+
+def get_gpa_api_key_status(user_id: str) -> dict[str, Any]:
+    """What the Web may know about the stored key: whether it exists, not its value."""
+    try:
+        row = _load_gpa_api_key_row(user_id)
+    except (CredentialStoreError, requests.RequestException):
+        row = None
+    if not row:
+        return {"enabled": False, "hasApiKey": False, "updatedAt": None}
+    return {
+        "enabled": bool(row.get("enabled")),
+        "hasApiKey": bool(row.get("api_key_ciphertext")),
+        "updatedAt": row.get("updated_at"),
+    }
+
+
+def get_gpa_api_key_secret(user_id: str) -> str:
+    """Decrypted key for backend use only; empty when unset or disabled."""
+    try:
+        row = _load_gpa_api_key_row(user_id)
+    except (CredentialStoreError, requests.RequestException):
+        return ""
+    if not row or not row.get("enabled"):
+        return ""
+    token = str(row.get("api_key_ciphertext") or "")
+    if not token:
+        return ""
+    try:
+        return decrypt_sensitive_value(token)
+    except CredentialStoreError:
+        return ""
+
+
+def put_gpa_api_key(user_id: str, api_key: str, enabled: bool = True) -> dict[str, Any]:
+    response = requests.post(
+        f"{SUPABASE_URL}/rest/v1/rpc/upsert_gpa_api_key",
+        headers=_service_role_headers(json_body=True),
+        json={
+            "p_user_id": user_id,
+            "p_api_key_ciphertext": encrypt_sensitive_value(api_key),
+            "p_enabled": enabled,
+            "p_key_version": 1,
+        },
+        timeout=DEFAULT_TIMEOUT,
+    )
+    response.raise_for_status()
+    return {"enabled": enabled, "hasApiKey": True, "updatedAt": datetime.now(timezone.utc).isoformat()}
+
+
+def delete_gpa_api_key(user_id: str) -> dict[str, Any]:
+    response = requests.post(
+        f"{SUPABASE_URL}/rest/v1/rpc/delete_gpa_api_key",
+        headers=_service_role_headers(json_body=True),
+        json={"p_user_id": user_id},
+        timeout=DEFAULT_TIMEOUT,
+    )
+    response.raise_for_status()
+    return {"enabled": False, "hasApiKey": False, "updatedAt": None}
+
+
 def _legacy_school_credentials_status(user_id: str, access_token: str | None = None) -> dict[str, Any]:
     content = load_user_content(user_id, access_token)
     settings = _settings(content)

@@ -16,7 +16,7 @@
 
 - [ ] `user_settings.student_password` 欄位資料已清空、`ENCRYPTION_KEY` 已淘汰（2026-09-08）；可再開一個 migration 直接移除該欄位（前端與 worker 都不再引用）。
 - [ ] 三位遷移帳號（jum60412、wanyong0925、a0909041576）用臨時密碼首次登入後請改密碼（Auth Site URL 已改為正式網址，重設密碼信可正常使用）。
-- [ ] GPA 查詢安全化：myNTUST API token 目前明文存在 `user_data.content.settings.gpaApi`，且查詢結果逐筆打 myNTUST API（限速 120 次/分）。改為後端加密保存（沿用 `app_private` 機制）並批次查詢、快取 24 小時，處理 429。
+- [ ] GPA 查詢安全化：程式已完成（密鑰改存 `app_private.gpa_api_keys`、查詢走 `Authorization`、24 小時快取、429 退避、去重併發）。待授權後依序：`supabase db push` → `scripts/migrate_gpa_api_keys.py --apply`（1 位使用者）→ 部署；部署後用你的帳號在課程查詢確認 GPA 欄位仍有值。
 - [ ] 評估 Tailscale ACL：tailnet 內有公司帳號的 Windows 節點，可限制只有 `hezhen0816@` 的裝置能存取 `hezhen:8000`。
 
 ## P2 改進

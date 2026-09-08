@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AppSettings, Course, CourseProgram, CourseSearchResult, OfficialSelectionSyncResponse, PendingRequirement } from '../shared/types';
+import type { AppSettings, Course, CourseProgram, CourseSearchResult, GpaApiKeyStatus, OfficialSelectionSyncResponse, PendingRequirement } from '../shared/types';
 import {
   addOfficialInitialSelectionWaitlistCourse,
+  deleteGpaApiKey,
+  getGpaApiKeyStatus,
   joinOfficialInitialSelectionCourse,
   keepOfficialInitialSelectionAlive,
   removeOfficialInitialSelectionCourse,
   reorderOfficialInitialSelectionCourses,
+  saveGpaApiKey,
   syncOfficialInitialSelection,
 } from '../shared/api';
+import { getAccessToken } from '../shared/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useCourseData } from '../shared/hooks/useCourseData';
 import { AuthPage } from './AuthPage';
@@ -95,6 +99,38 @@ export default function CoursePlannerWebApp() {
   const { session, loading: authLoading } = useAuth();
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [monitorActionCourseNo, setMonitorActionCourseNo] = useState<string | null>(null);
+  const [gpaApiKeyStatus, setGpaApiKeyStatus] = useState<GpaApiKeyStatus | null>(null);
+
+  useEffect(() => {
+    if (!session) {
+      setGpaApiKeyStatus(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const status = await getGpaApiKeyStatus(token);
+        if (!cancelled) setGpaApiKeyStatus(status);
+      } catch {
+        // 後端不可達時就當作未設定，不打斷其他功能
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  const saveGpaApiKeySettings = async (apiKey: string, enabled: boolean) => {
+    const token = await getAccessToken();
+    if (!token) throw new Error('請先登入後再保存 GPA 密鑰。');
+    setGpaApiKeyStatus(await saveGpaApiKey(token, apiKey, enabled));
+  };
+
+  const deleteGpaApiKeySettings = async () => {
+    const token = await getAccessToken();
+    if (!token) throw new Error('請先登入後再刪除 GPA 密鑰。');
+    setGpaApiKeyStatus(await deleteGpaApiKey(token));
+  };
 
   const addMonitorCourse = async (offering: CourseSearchResult) => {
     if (isDemoMode || !session) {
@@ -151,8 +187,7 @@ export default function CoursePlannerWebApp() {
     runManualSearch,
     resetCourseSearchFilters,
     exportCourseResults,
-  } = useCourseSearch(data.settings?.gpaApi);
-  const officialGpaApiKey = data.settings?.gpaApi?.enabled ? data.settings.gpaApi.apiKey.trim() : '';
+  } = useCourseSearch();
   const [planningMode, setPlanningMode] = useState<PlanningMode>('lottery');
   const [activeRequirement, setActiveRequirement] = useState<PendingRequirement | null>(null);
   const [offeringResults] = useState<CourseSearchResult[]>([]);
@@ -611,10 +646,10 @@ export default function CoursePlannerWebApp() {
     try {
       const accessToken = await getLatestAccessToken();
       const payload = action === 'join'
-        ? await joinOfficialInitialSelectionCourse(username, normalizedCourseNo, accessToken || undefined, officialGpaApiKey || undefined)
+        ? await joinOfficialInitialSelectionCourse(username, normalizedCourseNo, accessToken || undefined)
         : action === 'waitlist'
-          ? await addOfficialInitialSelectionWaitlistCourse(username, normalizedCourseNo, accessToken || undefined, officialGpaApiKey || undefined)
-          : await removeOfficialInitialSelectionCourse(username, normalizedCourseNo, accessToken || undefined, officialGpaApiKey || undefined);
+          ? await addOfficialInitialSelectionWaitlistCourse(username, normalizedCourseNo, accessToken || undefined)
+          : await removeOfficialInitialSelectionCourse(username, normalizedCourseNo, accessToken || undefined);
       updateOfficialSelection(payload);
       setOfficialSelectionStatus('success');
       setOfficialSelectionMessage(`官方已回傳最新狀態：已登記 ${payload.registered_count} 門，待加入 ${payload.available_count} 門。`);
@@ -652,7 +687,7 @@ export default function CoursePlannerWebApp() {
     setOfficialSelectionMessage('正在送到官方待加入清單...');
     try {
       const accessToken = await getLatestAccessToken();
-      const payload = await addOfficialInitialSelectionWaitlistCourse(username, normalizedCourseNo, accessToken || undefined, officialGpaApiKey || undefined);
+      const payload = await addOfficialInitialSelectionWaitlistCourse(username, normalizedCourseNo, accessToken || undefined);
       updateOfficialSelection(payload);
       if (officialSelectionContainsCourse(payload, normalizedCourseNo)) {
         setOfficialSelectionStatus('success');
@@ -715,7 +750,7 @@ export default function CoursePlannerWebApp() {
     setOfficialSelectionMessage('正在儲存官方志願序...');
     try {
       const accessToken = await getLatestAccessToken();
-      const payload = await reorderOfficialInitialSelectionCourses(username, normalizedCourseNos, accessToken || undefined, officialGpaApiKey || undefined);
+      const payload = await reorderOfficialInitialSelectionCourses(username, normalizedCourseNos, accessToken || undefined);
       updateOfficialSelection(payload);
       setOfficialSelectionStatus('success');
       setOfficialSelectionMessage(`官方已回傳最新志願序：已登記 ${payload.registered_count} 門。`);
@@ -748,7 +783,7 @@ export default function CoursePlannerWebApp() {
     setOfficialSelectionMessage('正在讀取官方選課狀態...');
     try {
       const accessToken = await getLatestAccessToken();
-      const payload = await syncOfficialInitialSelection(username, password, accessToken || undefined, officialGpaApiKey || undefined);
+      const payload = await syncOfficialInitialSelection(username, password, accessToken || undefined);
       updateOfficialSelection(payload);
       let credentialMessage = '';
       if (rememberSchoolCredentials && password) {
@@ -876,7 +911,7 @@ export default function CoursePlannerWebApp() {
             officialSelection={officialSelection}
             officialSelectionStatus={officialSelectionStatus}
             officialSelectionMessage={officialSelectionMessage}
-            initialGpaApiSettings={data.settings?.gpaApi}
+            gpaApiKeyStatus={gpaApiKeyStatus}
             initialProgramDepartmentSettings={data.settings?.programDepartments}
             onOpenSchoolSync={openSchoolDataSync}
             onOpenOfficialSelectionSync={() => openOfficialSelectionSync()}
@@ -884,15 +919,8 @@ export default function CoursePlannerWebApp() {
             onSaveTargets={(targets) => {
               setData((prev) => ({ ...prev, targets }));
             }}
-            onSaveGpaApiSettings={(gpaApi) => {
-              setData((prev) => ({
-                ...prev,
-                settings: {
-                  ...(prev.settings || {}),
-                  gpaApi,
-                },
-              }));
-            }}
+            onSaveGpaApiKey={saveGpaApiKeySettings}
+            onDeleteGpaApiKey={deleteGpaApiKeySettings}
             onSaveProgramDepartmentSettings={(programDepartments) => {
               setData((prev) => ({
                 ...prev,

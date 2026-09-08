@@ -2,17 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { KeyRound, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
 import type {
   AppData,
-  GpaApiSettings,
+  GpaApiKeyStatus,
   OfficialSelectionSyncResponse,
   ProgramDepartmentSettings,
   SchoolSyncStatus,
 } from '../../shared/types';
 import { listCourseDepartments } from '../../shared/domain/courseDepartments';
 
-const EMPTY_GPA_API_SETTINGS: GpaApiSettings = {
-  enabled: false,
-  apiKey: '',
-};
 const EMPTY_PROGRAM_DEPARTMENT_SETTINGS: ProgramDepartmentSettings = {};
 const COURSE_DEPARTMENTS = listCourseDepartments();
 
@@ -29,10 +25,11 @@ type SettingsPageProps = {
   officialSelection: OfficialSelectionSyncResponse | null;
   officialSelectionStatus: SyncActivity;
   officialSelectionMessage: string;
-  initialGpaApiSettings?: GpaApiSettings;
+  gpaApiKeyStatus: GpaApiKeyStatus | null;
   initialProgramDepartmentSettings?: ProgramDepartmentSettings;
   onSaveTargets: (targets: AppData['targets']) => void;
-  onSaveGpaApiSettings: (settings: GpaApiSettings) => void;
+  onSaveGpaApiKey: (apiKey: string, enabled: boolean) => Promise<void>;
+  onDeleteGpaApiKey: () => Promise<void>;
   onSaveProgramDepartmentSettings: (settings: ProgramDepartmentSettings) => void;
   onOpenSchoolSync: () => void;
   onOpenOfficialSelectionSync: () => void;
@@ -50,20 +47,21 @@ export function SettingsPage({
   officialSelection,
   officialSelectionStatus,
   officialSelectionMessage,
-  initialGpaApiSettings,
+  gpaApiKeyStatus,
   initialProgramDepartmentSettings,
   onSaveTargets,
-  onSaveGpaApiSettings,
+  onSaveGpaApiKey,
+  onDeleteGpaApiKey,
   onSaveProgramDepartmentSettings,
   onOpenSchoolSync,
   onOpenOfficialSelectionSync,
   onClearSavedSchoolCredentials,
 }: SettingsPageProps) {
   const [settingsForm, setSettingsForm] = useState(initialSettings);
-  const [gpaApiForm, setGpaApiForm] = useState<GpaApiSettings>({
-    ...EMPTY_GPA_API_SETTINGS,
-    ...initialGpaApiSettings,
-  });
+  const [gpaApiKeyInput, setGpaApiKeyInput] = useState('');
+  const [gpaEnabled, setGpaEnabled] = useState(gpaApiKeyStatus?.enabled ?? false);
+  const [gpaSaving, setGpaSaving] = useState(false);
+  const [gpaMessage, setGpaMessage] = useState('');
   const [programDepartmentForm, setProgramDepartmentForm] = useState<ProgramDepartmentSettings>({
     ...EMPTY_PROGRAM_DEPARTMENT_SETTINGS,
     ...initialProgramDepartmentSettings,
@@ -79,11 +77,8 @@ export function SettingsPage({
   }, [initialSettings]);
 
   useEffect(() => {
-    setGpaApiForm({
-      ...EMPTY_GPA_API_SETTINGS,
-      ...initialGpaApiSettings,
-    });
-  }, [initialGpaApiSettings]);
+    setGpaEnabled(gpaApiKeyStatus?.enabled ?? false);
+  }, [gpaApiKeyStatus]);
 
   useEffect(() => {
     setProgramDepartmentForm({
@@ -250,60 +245,90 @@ export function SettingsPage({
               <h2 className="text-base font-semibold text-slate-900">GPA API 密鑰</h2>
             </div>
             <p className="mt-2 text-sm text-slate-500">
-              預留 GPA API 串接設定；目前只保存設定，不會自動向第三方 GPA API 發送請求。
+              啟用後，課程查詢結果會附上該課程的歷年 GPA。密鑰由後端加密保存，不會回傳到瀏覽器。
             </p>
           </div>
           <span className={`w-fit rounded-full px-2 py-1 text-xs font-medium ${
-            gpaApiForm.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+            gpaApiKeyStatus?.hasApiKey && gpaApiKeyStatus.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
           }`}>
-            {gpaApiForm.enabled ? '已啟用' : '未啟用'}
+            {gpaApiKeyStatus?.hasApiKey ? (gpaApiKeyStatus.enabled ? '已啟用' : '已保存（停用中）') : '未設定'}
           </span>
         </div>
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            onSaveGpaApiSettings({
-              enabled: gpaApiForm.enabled,
-              apiKey: gpaApiForm.apiKey.trim(),
-              updatedAt: new Date().toISOString(),
-            });
+            const apiKey = gpaApiKeyInput.trim();
+            if (!apiKey) {
+              setGpaMessage('請先貼上 API 密鑰。');
+              return;
+            }
+            setGpaSaving(true);
+            setGpaMessage('');
+            try {
+              await onSaveGpaApiKey(apiKey, gpaEnabled);
+              setGpaApiKeyInput('');
+              setGpaMessage('已保存到後端。');
+            } catch (error) {
+              setGpaMessage(error instanceof Error ? error.message : '保存失敗');
+            } finally {
+              setGpaSaving(false);
+            }
           }}
           className="space-y-4 p-5"
         >
           <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
             <input
               type="checkbox"
-              checked={gpaApiForm.enabled}
-              onChange={(event) => setGpaApiForm({ ...gpaApiForm, enabled: event.target.checked })}
+              checked={gpaEnabled}
+              onChange={(event) => setGpaEnabled(event.target.checked)}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span>
-              <span className="block text-sm font-medium text-slate-800">啟用 GPA API 串接</span>
-              <span className="mt-1 block text-xs text-slate-500">啟用後，未來 GPA 匯入流程會讀取這組 API 設定。</span>
+              <span className="block text-sm font-medium text-slate-800">啟用 GPA 查詢</span>
+              <span className="mt-1 block text-xs text-slate-500">停用後保留密鑰但課程查詢不再帶 GPA。</span>
             </span>
           </label>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TextField
-              label="API 密鑰"
-              value={gpaApiForm.apiKey}
-              onChange={(value) => setGpaApiForm({ ...gpaApiForm, apiKey: value })}
-              placeholder="貼上 GPA API token"
+              label={gpaApiKeyStatus?.hasApiKey ? 'API 密鑰（留空則沿用已保存的）' : 'API 密鑰'}
+              value={gpaApiKeyInput}
+              onChange={setGpaApiKeyInput}
+              placeholder={gpaApiKeyStatus?.hasApiKey ? '••••••••（已保存）' : '貼上 myNTUST API token'}
               type="password"
               wide
             />
           </div>
 
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            GPA API 密鑰屬於敏感資料；正式串接前建議改由後端加密保存，避免把密鑰暴露在前端或一般資料欄位。
-          </div>
+          {gpaMessage && <p className="text-sm text-slate-600">{gpaMessage}</p>}
 
-          <div className="flex justify-end border-t border-slate-100 pt-4">
+          <div className="flex justify-between border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              disabled={!gpaApiKeyStatus?.hasApiKey || gpaSaving}
+              onClick={async () => {
+                setGpaSaving(true);
+                setGpaMessage('');
+                try {
+                  await onDeleteGpaApiKey();
+                  setGpaApiKeyInput('');
+                  setGpaMessage('已刪除保存的密鑰。');
+                } catch (error) {
+                  setGpaMessage(error instanceof Error ? error.message : '刪除失敗');
+                } finally {
+                  setGpaSaving(false);
+                }
+              }}
+              className="rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            >
+              刪除密鑰
+            </button>
             <button
               type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              disabled={gpaSaving}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              儲存 GPA API 設定
+              {gpaSaving ? '處理中…' : '儲存 GPA API 設定'}
             </button>
           </div>
         </form>

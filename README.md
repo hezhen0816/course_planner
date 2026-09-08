@@ -129,7 +129,8 @@ NTUST_VERIFY_SSL=true
 - `POST /api/schedule/sync`：同步校務課表並保存快照；可用 request password，或使用已保存帳密
 - `GET /api/schedule/{profile_key}`：讀取最新課表快照
 - `POST /api/history/import`：匯入歷史修課紀錄並保存快照；可用 request password，或使用已保存帳密
-- `GET /api/courses/search`：查詢官方開課資料；可帶 `X-GPA-API-Key`（myNTUST API token）在結果附上 GPA
+- `GET /api/courses/search`：查詢官方開課資料；帶 `Authorization` 且該帳號已啟用 GPA 密鑰時，後端會補上各課程 GPA（密鑰存在 `app_private.gpa_api_keys`，不經前端）
+- `GET/PUT/DELETE /api/gpa-api-key`：管理自己的 myNTUST GPA 密鑰；只回傳是否已保存，不回傳密鑰本身
 - `GET /api/tr-rooms/status`：查詢目前或下一節 TR 教室使用狀態
 - `POST /api/moodle/assignments/sync`：同步 Moodle 待繳事項快照；可用 request password，或使用已保存帳密
 - `POST /api/official-selection/a02/*`：使用者明確確認後送出官方初選操作；mutating request 需帶 `confirmed: true`，後端會重用已保存官方 session 或用已保存帳密重新登入，但不做自動搶課、輪詢或排程送出

@@ -68,6 +68,19 @@ class SchoolCredentialsResponse(BaseModel):
     hasPassword: bool = False
 
 
+class GpaApiKeySaveRequest(BaseModel):
+    apiKey: str = Field(min_length=1)
+    enabled: bool = True
+
+
+class GpaApiKeyResponse(BaseModel):
+    """The stored token is never sent back to the client — only whether it exists."""
+
+    enabled: bool = False
+    hasApiKey: bool = False
+    updatedAt: str | None = None
+
+
 class CourseRow(BaseModel):
     course_code: str
     course_name: str

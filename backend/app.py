@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 try:
     from .api.courses import create_courses_router
+    from .api.gpa_api_key import create_gpa_api_key_router
     from .api.health import create_health_router
     from .api.official_selection import create_official_selection_router
     from .api.planner import create_planner_router
@@ -19,9 +20,13 @@ try:
     from .api.sync import create_sync_router
     from .api.tr_rooms import create_tr_rooms_router
     from .credentials import (
+        delete_gpa_api_key,
         delete_school_credentials,
+        get_gpa_api_key_secret,
+        get_gpa_api_key_status,
         get_school_credentials_secret,
         get_school_credentials_status,
+        put_gpa_api_key,
         put_school_credentials,
         resolve_user_id,
     )
@@ -52,6 +57,7 @@ try:
     from .services import session_context
 except ImportError:  # pragma: no cover - supports Railway backend/ cwd imports.
     from api.courses import create_courses_router
+    from api.gpa_api_key import create_gpa_api_key_router
     from api.health import create_health_router
     from api.official_selection import create_official_selection_router
     from api.planner import create_planner_router
@@ -59,9 +65,13 @@ except ImportError:  # pragma: no cover - supports Railway backend/ cwd imports.
     from api.sync import create_sync_router
     from api.tr_rooms import create_tr_rooms_router
     from credentials import (
+        delete_gpa_api_key,
         delete_school_credentials,
+        get_gpa_api_key_secret,
+        get_gpa_api_key_status,
         get_school_credentials_secret,
         get_school_credentials_status,
+        put_gpa_api_key,
         put_school_credentials,
         resolve_user_id,
     )
@@ -140,6 +150,12 @@ def _optional_authorization_context(authorization: str | None) -> tuple[str, str
         authorization,
         lambda value: _authorization_context(value),
     )
+
+
+def _optional_user_id(authorization: str | None) -> str:
+    """User id for endpoints that work signed-out (course search): '' when absent/invalid."""
+    context = _optional_authorization_context(authorization)
+    return context[0] if context else ""
 
 
 def _required_user_context(authorization: str | None) -> tuple[str, str]:
@@ -289,7 +305,17 @@ app.include_router(
             course_name=course_name,
             verify_ssl=verify_ssl,
             include_cross_school=include_cross_school,
-        )
+        ),
+        # GPA token 只在後端解密使用；前端不再送 X-GPA-API-Key。
+        lambda authorization: get_gpa_api_key_secret(_optional_user_id(authorization)),
+    )
+)
+app.include_router(
+    create_gpa_api_key_router(
+        lambda authorization: _current_user_context(authorization),
+        lambda user_id: get_gpa_api_key_status(user_id),
+        lambda user_id, api_key, enabled: put_gpa_api_key(user_id, api_key, enabled),
+        lambda user_id: delete_gpa_api_key(user_id),
     )
 )
 app.include_router(create_planner_router(lambda pdf_bytes, filename: parse_requirement_pdf(pdf_bytes, filename)))

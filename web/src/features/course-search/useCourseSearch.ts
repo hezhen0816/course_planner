@@ -1,6 +1,7 @@
+import { getAccessToken } from '../../shared/supabase';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCourseSemesters, searchCourses } from '../../shared/api';
-import type { CourseSearchResult, CourseSemesterInfo, GpaApiSettings } from '../../shared/types';
+import type { CourseSearchResult, CourseSemesterInfo, } from '../../shared/types';
 import { parseCourseDepartment } from '../../shared/domain/courseDepartments';
 import {
   type CapacityFilter,
@@ -35,7 +36,7 @@ function splitCourseNameQueries(query: string): string[] {
     .filter(Boolean);
 }
 
-export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
+export function useCourseSearch() {
   const [querySemester, setQuerySemester] = useState('1142');
   const [courseSemesters, setCourseSemesters] = useState<CourseSemesterInfo[]>([]);
   const [manualQuery, setManualQuery] = useState('');
@@ -122,10 +123,11 @@ export function useCourseSearch(gpaApiSettings?: GpaApiSettings) {
     setManualStatus('loading');
     setManualError('');
     try {
-      const gpaApiKey = gpaApiSettings?.enabled ? gpaApiSettings.apiKey.trim() : '';
+      // 登入時帶 token，後端才會用已保存的 GPA 密鑰補上 GPA
+      const accessToken = await getAccessToken();
       const searchQueries = queries && queries.length > 0 ? queries : [query];
       const resultGroups = await Promise.all(
-        searchQueries.map((searchQuery) => searchCourses(querySemester, searchQuery, mode, gpaApiKey || undefined, includeCrossSchool)),
+        searchQueries.map((searchQuery) => searchCourses(querySemester, searchQuery, mode, accessToken || undefined, includeCrossSchool)),
       );
       const seen = new Set<string>();
       const exactNames = mode === 'name' && exactCourseNameSearch

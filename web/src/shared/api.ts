@@ -66,13 +66,33 @@ export function searchCourses(
   semester: string,
   query: string,
   mode: 'name' | 'code',
-  gpaApiKey?: string,
+  accessToken?: string,
   includeCrossSchool = false,
 ): Promise<CourseSearchResult[]> {
   const params = new URLSearchParams({ semester, q: query, mode });
   if (includeCrossSchool) params.set('include_cross_school', 'true');
+  // 帶 token 時後端會用它取出已保存的 GPA 密鑰並附上 GPA；密鑰不經過前端。
   return apiRequest<CourseSearchResult[]>(`/api/courses/search?${params.toString()}`, {
-    headers: gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : undefined,
+    headers: accessToken ? authHeaders(accessToken) : undefined,
+  });
+}
+
+export function getGpaApiKeyStatus(accessToken: string): Promise<GpaApiKeyStatus> {
+  return apiRequest<GpaApiKeyStatus>('/api/gpa-api-key', { headers: authHeaders(accessToken) });
+}
+
+export function saveGpaApiKey(accessToken: string, apiKey: string, enabled: boolean): Promise<GpaApiKeyStatus> {
+  return apiRequest<GpaApiKeyStatus>('/api/gpa-api-key', {
+    method: 'PUT',
+    headers: { ...authHeaders(accessToken), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey, enabled }),
+  });
+}
+
+export function deleteGpaApiKey(accessToken: string): Promise<GpaApiKeyStatus> {
+  return apiRequest<GpaApiKeyStatus>('/api/gpa-api-key', {
+    method: 'DELETE',
+    headers: authHeaders(accessToken),
   });
 }
 
@@ -153,13 +173,11 @@ export function syncOfficialInitialSelection(
   username: string,
   password: string,
   accessToken?: string,
-  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/sync', {
     method: 'POST',
     headers: {
       ...jsonHeaders(accessToken),
-      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
     },
     body: JSON.stringify({
       username,
@@ -189,13 +207,11 @@ export function joinOfficialInitialSelectionCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
-  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/join', {
     method: 'POST',
     headers: {
       ...jsonHeaders(accessToken),
-      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
     },
     body: JSON.stringify({
       username,
@@ -211,13 +227,11 @@ export function addOfficialInitialSelectionWaitlistCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
-  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/add-to-waitlist', {
     method: 'POST',
     headers: {
       ...jsonHeaders(accessToken),
-      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
     },
     body: JSON.stringify({
       username,
@@ -233,13 +247,11 @@ export function removeOfficialInitialSelectionCourse(
   username: string,
   courseNo: string,
   accessToken?: string,
-  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/remove', {
     method: 'POST',
     headers: {
       ...jsonHeaders(accessToken),
-      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
     },
     body: JSON.stringify({
       username,
@@ -255,13 +267,11 @@ export function reorderOfficialInitialSelectionCourses(
   username: string,
   orderedCourseNos: string[],
   accessToken?: string,
-  gpaApiKey?: string,
 ): Promise<OfficialSelectionSyncResponse> {
   return apiRequest<OfficialSelectionSyncResponse>('/api/official-selection/a02/reorder', {
     method: 'POST',
     headers: {
       ...jsonHeaders(accessToken),
-      ...(gpaApiKey ? { 'X-GPA-API-Key': gpaApiKey } : {}),
     },
     body: JSON.stringify({
       username,

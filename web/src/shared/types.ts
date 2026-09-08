@@ -106,10 +106,11 @@ export interface AppTargets {
   minor: number;
 }
 
-export interface GpaApiSettings {
+/** GPA 密鑰狀態；密鑰本身只存在後端 app_private，前端不持有。 */
+export interface GpaApiKeyStatus {
   enabled: boolean;
-  apiKey: string;
-  updatedAt?: string;
+  hasApiKey: boolean;
+  updatedAt?: string | null;
 }
 
 export interface ProgramDepartmentSettings {
@@ -119,7 +120,6 @@ export interface ProgramDepartmentSettings {
 }
 
 export interface AppSettings {
-  gpaApi?: GpaApiSettings;
   programDepartments?: ProgramDepartmentSettings;
   [key: string]: unknown;
 }

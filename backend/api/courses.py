@@ -9,18 +9,22 @@ from fastapi import APIRouter, Header, HTTPException, Query
 
 try:
     from ..config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
-    from ..gpa import fetch_course_gpa
+    from ..gpa import fetch_course_gpas
     from ..models import CourseSearchResult, CourseSemesterInfo
 except ImportError:  # pragma: no cover - supports PYTHONPATH=backend imports.
     from config import DEFAULT_VERIFY_SSL, SEMESTERS_INFO_URL
-    from gpa import fetch_course_gpa
+    from gpa import fetch_course_gpas
     from models import CourseSearchResult, CourseSemesterInfo
 
 
 CourseSearchFetcher = Callable[..., list[dict[str, Any]]]
+GpaApiKeyReader = Callable[[str | None], str]
 
 
-def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRouter:
+def create_courses_router(
+    fetch_courses_filtered: CourseSearchFetcher,
+    read_gpa_api_key: GpaApiKeyReader | None = None,
+) -> APIRouter:
     router = APIRouter(prefix="/api/courses", tags=["courses"])
 
     @router.get("/semesters", response_model=list[CourseSemesterInfo])
@@ -57,7 +61,7 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
         mode: str = "name",
         refresh: bool = False,
         include_cross_school: bool = False,
-        gpa_api_key: str | None = Header(default=None, alias="X-GPA-API-Key"),
+        authorization: str | None = Header(default=None),
     ) -> list[CourseSearchResult]:
         try:
             if mode not in {"name", "code"}:
@@ -82,6 +86,8 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
                     continue
                 filtered.append(_course_search_result(course))
             results = _sort_course_search_results(_merge_course_search_results(filtered), q)
+            # GPA 密鑰由後端從 app_private 解密取得，前端不經手
+            gpa_api_key = read_gpa_api_key(authorization) if read_gpa_api_key else ""
             if gpa_api_key:
                 _attach_gpa_to_courses(results, gpa_api_key, DEFAULT_VERIFY_SSL)
             return results
@@ -94,10 +100,12 @@ def create_courses_router(fetch_courses_filtered: CourseSearchFetcher) -> APIRou
 
 
 def _attach_gpa_to_courses(courses: list[CourseSearchResult], api_key: str, verify_ssl: bool) -> None:
+    course_nos = [course.course_no for course in courses if course.course_no]
+    gpas = fetch_course_gpas(course_nos, api_key, verify_ssl)
     for course in courses:
         if not course.course_no:
             continue
-        course.gpa, course.gpa_status = fetch_course_gpa(course.course_no, api_key, verify_ssl)
+        course.gpa, course.gpa_status = gpas.get(course.course_no.strip().upper(), (None, "error"))
 
 
 def _as_int(value: Any) -> int | None:
