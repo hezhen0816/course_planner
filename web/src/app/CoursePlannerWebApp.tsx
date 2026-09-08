@@ -12,6 +12,7 @@ import {
   syncOfficialInitialSelection,
 } from '../shared/api';
 import { currentEnrollmentPhase } from '../shared/domain/enrollmentCalendar';
+import type { SchoolSyncMode } from '../features/school-sync/SchoolScheduleSyncModal';
 import { getAccessToken } from '../shared/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useCourseData } from '../shared/hooks/useCourseData';
@@ -241,7 +242,8 @@ export default function CoursePlannerWebApp() {
       setOfficialSelection((current) => (current ? { ...current, schedule_rows: rows } : current));
     },
   });
-  const [schoolSyncModalMode, setSchoolSyncModalMode] = useState<'school-data' | 'official-selection'>('school-data');
+  // 預設分頁跟著選課階段：加退選期開「目前選課」，初選期開「初選志願登記」
+  const [schoolSyncModalMode, setSchoolSyncModalMode] = useState<SchoolSyncMode>('courses');
   const [officialSelection, setOfficialSelection] = useState<OfficialSelectionSyncResponse | null>(null);
   const [officialSelectionStatus, setOfficialSelectionStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
   const [officialSelectionMessage, setOfficialSelectionMessage] = useState('');
@@ -623,14 +625,14 @@ export default function CoursePlannerWebApp() {
     setDetailCourse(null);
   };
 
-  const openSchoolDataSync = () => {
-    setSchoolSyncModalMode('school-data');
+  const openSchoolDataSync = (mode: SchoolSyncMode = 'courses') => {
+    setSchoolSyncModalMode(mode);
     openSchoolSyncModal();
   };
 
   const openOfficialSelectionSync = (message?: string) => {
     const nextMessage = typeof message === 'string' ? message : '';
-    setSchoolSyncModalMode('official-selection');
+    setSchoolSyncModalMode('preregistration');
     setOfficialSelectionStatus(nextMessage ? 'error' : 'idle');
     setOfficialSelectionMessage(nextMessage);
     openSchoolSyncModal();
@@ -983,12 +985,15 @@ export default function CoursePlannerWebApp() {
         importPreview={importPreview}
         isSchoolSyncOpen={isSchoolSyncOpen}
         schoolSyncMode={schoolSyncModalMode}
+        hasSavedSchoolCredentials={hasSavedSchoolCredentials}
+        enrollmentPhaseLabel={currentEnrollmentPhase(querySemester).label}
+        isPreregistrationPhase={currentEnrollmentPhase(querySemester).kind === 'preregistration'}
         onSchoolSyncModeChange={setSchoolSyncModalMode}
         schoolUsername={schoolUsername}
         schoolPassword={schoolPassword}
         rememberSchoolCredentials={rememberSchoolCredentials}
-        schoolSyncStatus={schoolSyncModalMode === 'official-selection' ? officialSelectionStatus : schoolSyncStatus}
-        schoolSyncMessage={schoolSyncModalMode === 'official-selection' ? officialSelectionMessage : schoolSyncMessage}
+        schoolSyncStatus={schoolSyncModalMode === 'preregistration' ? officialSelectionStatus : schoolSyncStatus}
+        schoolSyncMessage={schoolSyncModalMode === 'preregistration' ? officialSelectionMessage : schoolSyncMessage}
         detailCourse={detailCourse}
         isOnboardingOpen={isOnboardingOpen}
         onCloseOffering={() => setActiveRequirement(null)}
@@ -1000,11 +1005,14 @@ export default function CoursePlannerWebApp() {
         onRememberSchoolCredentialsChange={setRememberSchoolCredentials}
         onCloseSchoolSync={closeSchoolSyncModal}
         onSyncSchoolData={() => {
-          if (schoolSyncModalMode === 'official-selection') {
+          if (schoolSyncModalMode === 'preregistration') {
             void syncOfficialSelectionData();
             return;
           }
-          void syncSchoolData();
+          // 課表與成績分開：只按到的那一項才會去打對應的學校頁面
+          void syncSchoolData(schoolSyncModalMode === 'history'
+            ? { includeSchedule: false, includeHistory: true }
+            : { includeSchedule: true, includeHistory: false });
         }}
         onCloseCourseDetail={() => setDetailCourse(null)}
         onSaveCourseDetail={saveCourseDetail}

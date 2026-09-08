@@ -339,6 +339,11 @@ export function PlanningWorkspace({
   );
   const currentPlanningCredits = officialRegisteredCredits + virtualCredits;
   const enrolledCredits = scheduledCredits(enrolledCourses);
+  const enrolledCourseNos = new Set(
+    enrolledCourses
+      .map((course) => (course.scheduledOffering?.courseNo || '').trim().toUpperCase())
+      .filter(Boolean),
+  );
   const addDropCredits = enrolledCredits + virtualCredits;
   const officialRequiredPresetCourses = officialSelection ? requiredPresetCoursesForDisplay(officialSelection) : [];
   const officialRequiredPresetCount = officialRequiredPresetCourses.length;
@@ -522,14 +527,25 @@ export function PlanningWorkspace({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {virtualCourses.map((course) => (
-                    <PlanningListCourse
-                      key={course.id}
-                      course={course}
-                      data={data}
-                      onDelete={() => onDeleteCourse(course.id)}
-                    />
-                  ))}
+                  {virtualCourses.map((course) => {
+                    const courseNo = (course.scheduledOffering?.courseNo || '').trim().toUpperCase();
+                    // 已經出現在選課清單就是選上了，這筆待加簽是舊的
+                    const alreadyEnrolled = Boolean(courseNo) && enrolledCourseNos.has(courseNo);
+                    return (
+                      <div key={course.id}>
+                        <PlanningListCourse
+                          course={course}
+                          data={data}
+                          onDelete={() => onDeleteCourse(course.id)}
+                        />
+                        {alreadyEnrolled && (
+                          <p className="mt-1 px-1 text-xs text-emerald-700">
+                            已在選課清單中（已選上），這筆待加簽可以移除。
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

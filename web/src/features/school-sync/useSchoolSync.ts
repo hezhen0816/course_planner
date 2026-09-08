@@ -7,7 +7,13 @@ import {
   syncSchoolSchedule,
 } from '../../shared/api';
 import { supabase } from '../../shared/supabase';
-import type { AppData, RequirementSet } from '../../shared/types';
+import type {
+  AcademicHistoryRecord,
+  AppData,
+  Course,
+  PendingRequirement,
+  RequirementSet,
+} from '../../shared/types';
 import {
   RETAKE_SET_ID,
   coursesFromScheduleSync,
@@ -150,7 +156,15 @@ export function useSchoolSync({
     setSchoolPasswordState('');
   };
 
-  const syncSchoolData = async () => {
+  /**
+   * 校務同步。歷年成績一學期才變一次（期末登分），但加退選期課表天天在動，
+   * 所以兩者可以分開跑：只要課表時把 includeHistory 關掉，省下重抓 20 幾筆成績
+   * 與逐筆補查歷史節次的時間。
+   */
+  const syncSchoolData = async ({ includeSchedule = true, includeHistory = true }: {
+    includeSchedule?: boolean;
+    includeHistory?: boolean;
+  } = {}) => {
     const username = schoolUsername.trim();
     const password = schoolPassword.trim();
     if (!username) {
@@ -172,7 +186,8 @@ export function useSchoolSync({
     }
     const importSemesterId = targetSemester.id;
 
-    if (targetSemester.courses.length > 0 && !window.confirm(`匯入會覆蓋「${targetSemester.name}」目前的 ${targetSemester.courses.length} 門課，確定繼續嗎？`)) {
+    if (includeSchedule && targetSemester.courses.length > 0
+      && !window.confirm(`匯入會覆蓋「${targetSemester.name}」目前的 ${targetSemester.courses.length} 門課，確定繼續嗎？`)) {
       return;
     }
 
@@ -180,16 +195,29 @@ export function useSchoolSync({
     setSchoolSyncMessage('');
     try {
       const token = await getLatestAccessToken();
-      setSchoolSyncMessage('正在同步最新選課清單...');
-      const schedulePayload = await syncSchoolSchedule(username, password, token || undefined);
-      const courses = coursesFromScheduleSync(schedulePayload);
-      const officialScheduleRows = officialScheduleRowsFromSlots(schedulePayload.slots);
+      let schedulePayload: Awaited<ReturnType<typeof syncSchoolSchedule>> | null = null;
+      let courses: Course[] = [];
+      let officialScheduleRows: Record<string, string>[] = [];
+      if (includeSchedule) {
+        setSchoolSyncMessage('正在同步最新選課清單...');
+        schedulePayload = await syncSchoolSchedule(username, password, token || undefined);
+        courses = coursesFromScheduleSync(schedulePayload);
+        officialScheduleRows = officialScheduleRowsFromSlots(schedulePayload.slots);
+      }
 
-      setSchoolSyncMessage('已取得最新課表，正在同步歷年成績與補查歷史節次...');
-      const historyPayload = await importAcademicHistory(username, password, token || undefined);
-      const historyRecords = historyRecordsFromImport(historyPayload);
-      const historicalLookups = await lookupHistoricalSchedules(historyRecords);
-      const retakeRequirements = retakeRequirementsFromHistory(historyRecords);
+      let historyPayload: Awaited<ReturnType<typeof importAcademicHistory>> | null = null;
+      let historyRecords: AcademicHistoryRecord[] = [];
+      let historicalLookups: Awaited<ReturnType<typeof lookupHistoricalSchedules>> = new Map();
+      let retakeRequirements: PendingRequirement[] = [];
+      if (includeHistory) {
+        setSchoolSyncMessage(includeSchedule
+          ? '已取得最新課表，正在同步歷年成績與補查歷史節次...'
+          : '正在同步歷年成績與補查歷史節次...');
+        historyPayload = await importAcademicHistory(username, password, token || undefined);
+        historyRecords = historyRecordsFromImport(historyPayload);
+        historicalLookups = await lookupHistoricalSchedules(historyRecords);
+        retakeRequirements = retakeRequirementsFromHistory(historyRecords);
+      }
       const retakeSet: RequirementSet = {
         id: RETAKE_SET_ID,
         name: '待重修',
@@ -201,31 +229,42 @@ export function useSchoolSync({
       setData((prev) => ({
         ...prev,
         ...(() => {
-          const semestersWithSchedule = prev.semesters.map((semester) => (
-            semester.id === importSemesterId
-              ? { ...semester, courses }
-              : semester
-          ));
-          const merged = mergeHistoryRecordsIntoSemesters(semestersWithSchedule, historyRecords, historyPayload.student_no || username, historicalLookups);
+          const semestersWithSchedule = includeSchedule
+            ? prev.semesters.map((semester) => (
+              semester.id === importSemesterId
+                ? { ...semester, courses }
+                : semester
+            ))
+            : prev.semesters;
+          // 只同步課表時不重算歷史合併：沿用既有的已修紀錄與待重修，不要用空陣列蓋掉
+          const merged = includeHistory
+            ? mergeHistoryRecordsIntoSemesters(semestersWithSchedule, historyRecords, historyPayload?.student_no || username, historicalLookups)
+            : { semesters: semestersWithSchedule, importedCourseCount: 0, scheduledHistoryCourseCount: 0 };
           importedCourseCount = merged.importedCourseCount;
           scheduledHistoryCourseCount = merged.scheduledHistoryCourseCount;
           const otherSets = prev.requirementSets.filter((set) => set.id !== RETAKE_SET_ID);
           const otherRequirements = prev.pendingRequirements.filter((requirement) => requirement.setId !== RETAKE_SET_ID);
           return {
             semesters: merged.semesters,
-            historyRecords,
-            requirementSets: retakeRequirements.length > 0 ? [...otherSets, retakeSet] : otherSets,
-            pendingRequirements: [...otherRequirements, ...retakeRequirements],
+            ...(includeHistory ? {
+              historyRecords,
+              requirementSets: retakeRequirements.length > 0 ? [...otherSets, retakeSet] : otherSets,
+              pendingRequirements: [...otherRequirements, ...retakeRequirements],
+            } : {}),
             schoolSync: {
               ...prev.schoolSync,
-              scheduleSyncedAt: schedulePayload.synced_at,
-              scheduleCourseCount: courses.length,
-              historyImportedAt: historyPayload.imported_at,
-              historyRecordCount: historyRecords.length,
+              ...(includeSchedule && schedulePayload ? {
+                scheduleSyncedAt: schedulePayload.synced_at,
+                scheduleCourseCount: courses.length,
+              } : {}),
+              ...(includeHistory && historyPayload ? {
+                historyImportedAt: historyPayload.imported_at,
+                historyRecordCount: historyRecords.length,
+              } : {}),
             },
             // The workbench grid renders officialSelectionCache.schedule_rows, which
             // otherwise only changes on an official-selection sync and goes stale.
-            ...(prev.selectionPlan?.officialSelectionCache
+            ...(includeSchedule && prev.selectionPlan?.officialSelectionCache
               ? {
                 selectionPlan: {
                   ...prev.selectionPlan,
@@ -240,9 +279,11 @@ export function useSchoolSync({
           };
         })(),
       }));
-      onOfficialScheduleRowsSynced?.(officialScheduleRows);
-      setActiveSemesterId(importSemesterId);
-      markHistoryMigrated();
+      if (includeSchedule) {
+        onOfficialScheduleRowsSynced?.(officialScheduleRows);
+        setActiveSemesterId(importSemesterId);
+      }
+      if (includeHistory) markHistoryMigrated();
       let credentialMessage = '';
       if (rememberSchoolCredentials && password) {
         try {
@@ -258,7 +299,15 @@ export function useSchoolSync({
         setSchoolPasswordState('');
       }
       setSchoolSyncStatus('success');
-      setSchoolSyncMessage(`已同步完成：最新課表 ${courses.length} 門匯入「${targetSemester.name}」，歷年紀錄 ${historyRecords.length} 筆，${scheduledHistoryCourseCount} 門補到歷史節次，${importedCourseCount} 門寫入學期，${retakeRequirements.length} 門列為待重修。${credentialMessage ? ` ${credentialMessage}` : ''}`);
+      const parts: string[] = [];
+      if (includeSchedule) parts.push(`最新課表 ${courses.length} 門匯入「${targetSemester.name}」`);
+      if (includeHistory) {
+        parts.push(`歷年紀錄 ${historyRecords.length} 筆`);
+        parts.push(`${scheduledHistoryCourseCount} 門補到歷史節次`);
+        parts.push(`${importedCourseCount} 門寫入學期`);
+        parts.push(`${retakeRequirements.length} 門列為待重修`);
+      }
+      setSchoolSyncMessage(`已同步完成：${parts.join('，')}。${credentialMessage ? ` ${credentialMessage}` : ''}`);
     } catch (error) {
       setSchoolSyncStatus('error');
       setSchoolSyncMessage(error instanceof Error ? error.message : '校務資料同步失敗。');

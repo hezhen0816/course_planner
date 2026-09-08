@@ -31,7 +31,7 @@ type SettingsPageProps = {
   onSaveGpaApiKey: (apiKey: string, enabled: boolean) => Promise<void>;
   onDeleteGpaApiKey: () => Promise<void>;
   onSaveProgramDepartmentSettings: (settings: ProgramDepartmentSettings) => void;
-  onOpenSchoolSync: () => void;
+  onOpenSchoolSync: (mode?: 'courses' | 'history') => void;
   onOpenOfficialSelectionSync: () => void;
   onClearSavedSchoolCredentials: () => void;
 };
@@ -103,7 +103,7 @@ export function SettingsPage({
             <p className="mt-1 text-sm text-slate-500">校務資料同步、畢業門檻數字與帳號層級設定集中放在這裡，不混進選課流程。</p>
           </div>
           <button
-            onClick={onOpenSchoolSync}
+            onClick={() => onOpenSchoolSync('courses')}
             disabled={syncStatus === 'loading' || officialSelectionStatus === 'loading'}
             className="inline-flex items-center justify-center gap-2 self-start rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
@@ -115,15 +115,23 @@ export function SettingsPage({
         {/* Per-source status rows with timestamps replace the free-text banners,
             so "did this actually sync, and when?" is answered at a glance. */}
         <div className="mt-4 divide-y divide-slate-100 rounded-md border border-slate-200">
+          {/* 三個來源各自一列：課表天天在動、成績一學期一次、初選只有初選期有值 */}
           <SyncStatusRow
-            title="課表與成績"
+            title="目前選課"
             activity={syncStatus}
             message={syncMessage}
             summary={scheduleSummary(schoolSync)}
-            onSync={onOpenSchoolSync}
+            onSync={() => onOpenSchoolSync('courses')}
           />
           <SyncStatusRow
-            title="官方選課狀態"
+            title="歷年成績"
+            activity={syncStatus}
+            message={syncMessage}
+            summary={historySummary(schoolSync)}
+            onSync={() => onOpenSchoolSync('history')}
+          />
+          <SyncStatusRow
+            title="初選志願登記"
             activity={officialSelectionStatus}
             message={officialSelectionMessage}
             summary={officialSelectionSummary(officialSelection)}
@@ -204,7 +212,7 @@ export function SettingsPage({
             </p>
           </div>
           <button
-            onClick={onOpenSchoolSync}
+            onClick={() => onOpenSchoolSync('courses')}
             className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
           >
             <RefreshCw className="h-4 w-4" />
@@ -395,9 +403,20 @@ function formatSyncStamp(value: string): string {
 
 function scheduleSummary(schoolSync?: SchoolSyncStatus): SyncSummary {
   if (!schoolSync?.scheduleSyncedAt) return { state: 'never', label: '尚未同步' };
-  const parts = [`${schoolSync.scheduleCourseCount ?? 0} 門課`];
-  if (schoolSync.historyImportedAt) parts.push(`歷年紀錄 ${schoolSync.historyRecordCount ?? 0} 筆`);
-  return { state: 'fresh', label: `上次同步 ${formatSyncStamp(schoolSync.scheduleSyncedAt)}`, detail: parts.join(' · ') };
+  return {
+    state: 'fresh',
+    label: `上次同步 ${formatSyncStamp(schoolSync.scheduleSyncedAt)}`,
+    detail: `${schoolSync.scheduleCourseCount ?? 0} 門課`,
+  };
+}
+
+function historySummary(schoolSync?: SchoolSyncStatus): SyncSummary {
+  if (!schoolSync?.historyImportedAt) return { state: 'never', label: '尚未同步' };
+  return {
+    state: 'fresh',
+    label: `上次同步 ${formatSyncStamp(schoolSync.historyImportedAt)}`,
+    detail: `歷年紀錄 ${schoolSync.historyRecordCount ?? 0} 筆`,
+  };
 }
 
 function officialSelectionSummary(selection: OfficialSelectionSyncResponse | null): SyncSummary {

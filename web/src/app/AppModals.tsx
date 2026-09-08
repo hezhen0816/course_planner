@@ -4,7 +4,7 @@ import { CourseDetailModal } from '../features/history/CourseDetailModal';
 import { OnboardingModal } from './OnboardingModal';
 import { OfferingModal } from '../features/planning/OfferingModal';
 import { ImportPreviewModal } from '../features/requirements/ImportPreviewModal';
-import { SchoolScheduleSyncModal } from '../features/school-sync/SchoolScheduleSyncModal';
+import { SchoolScheduleSyncModal, type SchoolSyncMode } from '../features/school-sync/SchoolScheduleSyncModal';
 
 type AppModalsProps = {
   activeRequirement: PendingRequirement | null;
@@ -17,8 +17,11 @@ type AppModalsProps = {
   planningMode: PlanningMode;
   importPreview: ApiImportPreview | null;
   isSchoolSyncOpen: boolean;
-  schoolSyncMode: 'school-data' | 'official-selection';
-  onSchoolSyncModeChange: (mode: 'school-data' | 'official-selection') => void;
+  schoolSyncMode: SchoolSyncMode;
+  onSchoolSyncModeChange: (mode: SchoolSyncMode) => void;
+  hasSavedSchoolCredentials: boolean;
+  enrollmentPhaseLabel: string;
+  isPreregistrationPhase: boolean;
   schoolUsername: string;
   schoolPassword: string;
   rememberSchoolCredentials: boolean;
@@ -53,6 +56,9 @@ export function AppModals({
   isSchoolSyncOpen,
   schoolSyncMode,
   onSchoolSyncModeChange,
+  hasSavedSchoolCredentials,
+  enrollmentPhaseLabel,
+  isPreregistrationPhase,
   schoolUsername,
   schoolPassword,
   rememberSchoolCredentials,
@@ -98,6 +104,9 @@ export function AppModals({
         <SchoolScheduleSyncModal
           mode={schoolSyncMode}
           onModeChange={onSchoolSyncModeChange}
+          hasSavedCredentials={hasSavedSchoolCredentials}
+          phaseLabel={enrollmentPhaseLabel}
+          isPreregistrationPhase={isPreregistrationPhase}
           username={schoolUsername}
           password={schoolPassword}
           rememberCredentials={rememberSchoolCredentials}
