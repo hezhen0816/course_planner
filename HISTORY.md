@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 iOS 登入「hostname could not be found」：Info.plist 仍指舊 Supabase 專案
+
+合併時只改了 Web 與後端的 Supabase 設定，iOS `Info.plist` 的 `SupabaseURL`／`SupabaseAnonKey` 漏改，仍是已刪除的 `qpdvtsbqdpitreslazoe`。已改為 `eerlhmvwucnlbhemhvtz` 與其 publishable key；需重新建置安裝才生效。
+
 ## 2026-09-08 盤點 Windows 部署方式並把 deploy_windows.sh 補到報價系統同等護欄
 
 盤點：部署到 Windows 的有 4 個專案（course_planner → winhome；報價系統、工務管控、寄信系統 → dkfire），骨架都是「Mac ssh 叫 Windows git pull」，差別在護欄。報價系統最完整（乾淨樹、測試、腳本內 push、比對 HEAD、只在 .py 變動時重啟、煙霧測試），工務管控是其子集，本專案原本只有煙霧測試，寄信系統是手動清單（一次性、幾乎不改，不寫腳本）。決策：不統一 nssm／工作排程器與 dist 交付方式，只統一護欄；規則寫進 `~/AI協作/專案文件模板/AGENTS.md`「Windows 部署」。本專案腳本改為依 diff 決定 build web、重啟後端、重啟 worker，且只殺該任務自己的 python（原本一刀殺掉所有 course-compass python，是先前 worker 被殺卻不重啟的根源）。
