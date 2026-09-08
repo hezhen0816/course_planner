@@ -22,6 +22,7 @@ import { usePlannerStats } from '../features/planning/usePlannerStats';
 import { useSchoolSync } from '../features/school-sync/useSchoolSync';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { MonitorPage } from '../features/monitor/MonitorPage';
+import { addMonitoredCourse } from '../features/monitor/addMonitoredCourse';
 import {
   MANUAL_SET_ID,
   type ApiImportPreview,
@@ -93,6 +94,22 @@ type RecognitionRequirementDraft = {
 export default function CoursePlannerWebApp() {
   const { session, loading: authLoading } = useAuth();
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [monitorActionCourseNo, setMonitorActionCourseNo] = useState<string | null>(null);
+
+  const addMonitorCourse = async (offering: CourseSearchResult) => {
+    if (isDemoMode || !session) {
+      alert('略過登入模式無法加入監聽，請先登入。');
+      return;
+    }
+    const code = offering.course_no.trim().toUpperCase();
+    setMonitorActionCourseNo(code);
+    try {
+      const result = await addMonitoredCourse(offering);
+      alert(result.message);
+    } finally {
+      setMonitorActionCourseNo(null);
+    }
+  };
   const { data, setData, syncStatus, isLoading: dataLoading } = useCourseData(session);
   const [activePage, setActivePage] = useState<AppPage>(() => (
     window.location.hash === '#schedule-preview' ? 'planning' : 'course-search'
@@ -820,6 +837,8 @@ export default function CoursePlannerWebApp() {
             officialActionCourseNo={officialActionCourseNo}
             onAddSelectionCourse={(offering) => void submitSelectionCourse(offering)}
             onAddPlannedCourse={addPlannedCourse}
+            onAddMonitorCourse={(offering) => void addMonitorCourse(offering)}
+            monitorActionCourseNo={monitorActionCourseNo}
             onDeleteVirtualCourse={deleteSelectionCourse}
             onOpenPlanning={() => setActivePage('planning')}
           />

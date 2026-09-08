@@ -1,4 +1,4 @@
-import { ListChecks, Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { ListChecks, Loader2, Plus, Radar, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { AppData, Course, CourseSearchResult, CourseSemesterInfo, PendingRequirement } from '../../shared/types';
 import { listCourseDepartments, parseCourseDepartment } from '../../shared/domain/courseDepartments';
@@ -60,6 +60,8 @@ type CourseSearchCenterProps = {
   officialActionCourseNo: string | null;
   onAddSelectionCourse: (offering: CourseSearchResult) => void;
   onAddPlannedCourse: (offering: CourseSearchResult, requirementId?: string) => void;
+  onAddMonitorCourse: (offering: CourseSearchResult) => void;
+  monitorActionCourseNo: string | null;
   onDeleteVirtualCourse: (courseId: string) => void;
   onOpenPlanning: () => void;
 };
@@ -114,6 +116,8 @@ export function CourseSearchCenter({
   officialActionCourseNo,
   onAddSelectionCourse,
   onAddPlannedCourse,
+  onAddMonitorCourse,
+  monitorActionCourseNo,
   onDeleteVirtualCourse,
   onOpenPlanning,
 }: CourseSearchCenterProps) {
@@ -377,6 +381,8 @@ export function CourseSearchCenter({
                   officialActionCourseNo={officialActionCourseNo}
                   onAddSelectionCourse={() => onAddSelectionCourse(offering)}
                   onAddPlannedCourse={(requirementId) => onAddPlannedCourse(offering, requirementId)}
+                  onAddMonitorCourse={() => onAddMonitorCourse(offering)}
+                  monitorActionCourseNo={monitorActionCourseNo}
                 />
               ))}
             </tbody>
@@ -564,6 +570,8 @@ function CourseResultRow({
   officialActionCourseNo,
   onAddSelectionCourse,
   onAddPlannedCourse,
+  onAddMonitorCourse,
+  monitorActionCourseNo,
 }: {
   offering: CourseSearchResult;
   conflicts: Course[];
@@ -572,11 +580,14 @@ function CourseResultRow({
   officialActionCourseNo: string | null;
   onAddSelectionCourse: () => void;
   onAddPlannedCourse: (requirementId?: string) => void;
+  onAddMonitorCourse: () => void;
+  monitorActionCourseNo: string | null;
 }) {
   const [selectedRequirementId, setSelectedRequirementId] = useState('');
   const slots = parseNodeSlots(offering.node);
   const status = capacityStatus(offering);
   const isOfficialActionLoading = officialActionCourseNo === offering.course_no.trim().toUpperCase();
+  const isMonitorActionLoading = monitorActionCourseNo === offering.course_no.trim().toUpperCase();
   const department = parseCourseDepartment(offering.course_no);
   const gpaLabel = typeof offering.gpa === 'number' && Number.isFinite(offering.gpa)
     ? offering.gpa.toFixed(2)
@@ -661,6 +672,16 @@ function CourseResultRow({
           >
             {isOfficialActionLoading && <Loader2 className="h-3 w-3 animate-spin" />}
             {isOfficialActionLoading ? '處理中' : alreadyVirtual ? '重新送出' : '加入選課清單'}
+          </button>
+          <button
+            type="button"
+            onClick={onAddMonitorCourse}
+            disabled={!offering.course_no || isMonitorActionLoading}
+            title="加入選課監控：名額出現時通知，也可開啟自動加選"
+            className="inline-flex items-center gap-1 rounded-md border border-amber-300 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+          >
+            {isMonitorActionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radar className="h-3 w-3" />}
+            {isMonitorActionLoading ? '處理中' : '加入監聽'}
           </button>
         </div>
       </td>
