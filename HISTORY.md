@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 部署腳本補型別檢查：`tsc --noEmit -p .` 不等於 build 的 `tsc -b`
+
+GPA 那次部署在 web build 失敗（`api.ts` 少 import 型別）。原因：驗證時跑的 `npx tsc --noEmit -p .` 走根 tsconfig，不含 app 專案參照，因此沒檢到；build 用的是 `tsc -b`。而部署腳本把 build 排在 push 與遠端 pull 之後，遠端已前進到壞 commit 才失敗。已在腳本的測試階段加 `cd web && npx tsc -b`。另注意：中斷的部署會讓遠端 HEAD 已前進，重跑時 diff 判斷會認為沒事要做，必須用 `--force`。
+
 ## 2026-09-08 GPA 密鑰改存 app_private，查詢加快取與 429 退避
 
 問題：myNTUST token 明文存在 `public.user_data.content.settings.gpaApi`（使用者自己的 session 就讀得到，且會隨資料同步四處流動），前端還把它塞進 `X-GPA-API-Key` 標頭；一次搜尋 30 筆就打 30 次 API（限速 120 次/分）。正式庫只有 1 位使用者設定過（B11430207，62 字元）。

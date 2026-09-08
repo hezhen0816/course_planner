@@ -1,6 +1,7 @@
 import type {
   CourseSearchResult,
   CourseSemesterInfo,
+  GpaApiKeyStatus,
   HistoryImportResponse,
   OfficialSelectionSyncResponse,
   RequirementPdfImportResponse,

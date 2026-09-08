@@ -47,6 +47,9 @@ fi
 if [[ $FAST -eq 0 ]]; then
   echo "==> 後端測試"; npm run backend:test --silent >/dev/null
   echo "==> 前端 lint"; npm run web:lint --silent >/dev/null
+  # tsc -b（build 用的那一支）比 `tsc --noEmit -p .` 嚴格；在 push 前擋下型別錯誤，
+  # 否則錯誤要等 push、pull 之後的 build 才爆，遠端已經前進到壞的 commit。
+  echo "==> 前端型別檢查"; (cd web && npx tsc -b >/dev/null)
 else
   echo "==> 跳過測試（--fast）"
 fi
