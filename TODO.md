@@ -10,7 +10,7 @@
 ## P0 正確性／阻斷性
 
 - [ ] 監控 worker 的 SSO 鎖定保護只做了一半：連續 3 次失敗會暫停 15 分鐘（`backend/monitor/enrollment.py`），但儀表板沒有顯示「已暫停自動登入／帳號可能被鎖」的警示，使用者看不出來。
-- [ ] 加選嘗試次數改存 `monitored_courses.attempt_count` 的程式與 migration 已寫好（2026-09-08，本機測試通過），待：`supabase db push`、push `main`（Vercel）、Windows 重新部署 worker；部署後在監控頁確認「加選 n/m」與「重設」實際生效。
+- [ ] 加選嘗試次數已改存 `monitored_courses.attempt_count`（2026-09-08 已部署到正式庫、Vercel、Windows worker）；尚未用真實帳號在監控頁驗證「加選 n/m」顯示與「重設」按鈕。
 - [ ] 手機 App 尚未實測 https 路徑：Xcode 27 Beta 6 裝機成功，但還沒從後端 log 看到手機經 `hezhen.taile9e4a0.ts.net` 的請求；請使用者開 Tailscale 後同步一次並確認。
 
 ## P1 業務主線
