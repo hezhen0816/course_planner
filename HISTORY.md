@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 移除 `backend/supabase_schema.sql`
+
+程式與測試都沒有引用；內容與 migration 不一致（保留已淘汰的 `public.school_credentials`、沒有 monitor 三張表與今天新增的欄位）。否決「改寫成與 migration 同步」：同一事實只維護一處，schema 以 `supabase/migrations/` 為準。
+
 ## 2026-09-08 登入流程合一：查出 Phase 2 失敗的真正原因是進入點，不是 POST
 
 查證方式：匿名抓 SSO 登入頁，離線讓兩套解析器各自組 POST（URL、欄位完全相同，都是 POST 到 `https://ssoam2.ntust.edu.tw/`）；再用使用者授權的帳號 B11430207 各實登一次並記錄每一跳。結果：

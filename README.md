@@ -119,7 +119,7 @@ NTUST_VERIFY_SSL=true
 - Web 不會讀取或保存校務密碼明文；官方選課 session 會由後端加密保存，過期或失效時由後端使用已保存密文重新登入
 - iOS 不再把校務密碼寫入 `user_data.content.settings.school_password`；production legacy plaintext 已由 `20260613031804_remove_legacy_school_password_from_user_data.sql` 清除，使用者下次輸入密碼並勾選保存後會寫入 `app_private.school_credentials`
 
-資料表與快照 schema 在 [backend/supabase_schema.sql](backend/supabase_schema.sql)，migration 在 [supabase/migrations](supabase/migrations)。
+資料表、快照與 `app_private.*` 的 schema 以 [supabase/migrations](supabase/migrations) 為唯一來源（`backend/supabase_schema.sql` 已於 2026-09-08 移除，它殘留已淘汰的 `public.school_credentials` 且缺監控三張表）。
 
 ## API
 
