@@ -1,6 +1,6 @@
-# NTUST_Course_Monitor 併入 Course Compass 計畫（草案，待裁示）
+# NTUST_Course_Monitor 併入 Course Compass 計畫（已歸檔）
 
-日期：2026-09-07。狀態（2026-09-08）：Phase 0–3 完成；Phase 2 的「登入流程合一」失敗回退（見 HISTORY）；Phase 4 只剩下線舊 Vercel 站與歸檔 NTUST_Course_Monitor repo（見 TODO）。正式網域 `ntust-course-compass.vercel.app`。
+日期：2026-09-07 擬定，2026-09-08 執行完畢後歸檔。未做完的項目已移到 `TODO.md`：登入流程合一（Phase 2，正式環境失敗回退）、`ENCRYPTION_KEY` 淘汰、`attempt_count`、課程查詢列的「加入監聽」、iOS 監聽頁；`monitor_settings` 表決定不建（`user_settings` 直接沿用）。以下為當時的計畫原文，不再更新。
 
 ## 0. 目標與不做的事
 
