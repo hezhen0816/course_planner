@@ -20,6 +20,11 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 `/api/courses/semesters` 曾把 25 個學期都標成 current
+
+學校的 semestersinfo 對 25 個學期都給 `CurrentSemester: true`／`Static: false`，單看欄位分不出當前學期；`monitor/semester.py` 是靠「取清單第一筆有效值」。API 直接照抄該欄位，於是回傳 25 個 current，前端 `pickDefaultSemester` 取第一個才碰巧對——順序一變就會錯。改為只有 `get_default_semester()` 判定的那個標 true（實測 61 筆、current 只剩 `1151`），並補上端點測試。
+另外：`from ..logging_setup import` 少了 try/except 雙路徑，正式後端以 `uvicorn app:app --app-dir backend` 啟動時 `backend/` 是頂層，相對 import 越界導致後端起不來——部署腳本的煙霧測試擋下了。`npm run backend:check` 有涵蓋這條路徑（`PYTHONPATH=backend python -c "import app"`），之後改 backend import 記得跑它，別只跑 `backend:test`。
+
 ## 2026-09-09 日誌集中；順帶修掉兩個實際缺陷
 
 抽成 `backend/logging_setup.py`：模組只 `get_logger(__name__)`（掛在 `ntust_monitor` 底下），handler 只由進入點設定。過程中查出兩個真問題：

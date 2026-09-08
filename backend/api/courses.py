@@ -9,13 +9,13 @@ from fastapi import APIRouter, Header, HTTPException, Query
 
 try:
     from ..config import DEFAULT_VERIFY_SSL
-    from ..monitor.semester import fetch_semesters_info
+    from ..monitor.semester import fetch_semesters_info, get_default_semester
     from ..course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from ..gpa import fetch_course_gpas
     from ..models import CourseSearchResult, CourseSemesterInfo
 except ImportError:  # pragma: no cover - supports PYTHONPATH=backend imports.
     from config import DEFAULT_VERIFY_SSL
-    from monitor.semester import fetch_semesters_info
+    from monitor.semester import fetch_semesters_info, get_default_semester
     from course_capacity import ADD_DROP_PERIOD, capacity_limit, selected_count
     from gpa import fetch_course_gpas
     from models import CourseSearchResult, CourseSemesterInfo
@@ -36,11 +36,15 @@ def create_courses_router(
         try:
             # 共用 backend/monitor/semester.py 的抓取與快取，不再各自打一次 semestersinfo
             semesters = list(fetch_semesters_info(verify_ssl=DEFAULT_VERIFY_SSL))
+            # 學校對 25 個學期都標 CurrentSemester=true / Static=false，單看欄位分不出來；
+            # 真正的當前學期以 monitor/semester.py 的判定為準（取清單第一筆有效值），
+            # 否則前端的「current」會有 25 個，只是碰巧靠順序取到對的。
+            current_semester = get_default_semester(verify_ssl=DEFAULT_VERIFY_SSL)
             return [
                 CourseSemesterInfo(
                     semester=str(item.get("Semester") or ""),
                     english_label=str(item.get("EngSemester") or ""),
-                    current=bool(item.get("CurrentSemester")),
+                    current=str(item.get("Semester") or "").strip() == current_semester,
                 )
                 for item in semesters
                 if item.get("Semester")
