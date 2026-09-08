@@ -20,6 +20,13 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-08 刪除三個 codex 殘留分支
+
+都停在 6 月，且沒有 main 缺少的東西：`web-planner-redesign` 領先 0 個 commit（內容全在 main）；`web-ux-audit-low-risk`（19）與 `project-refactor`（99）的內容在 2026-09-07 已挑完，剩下的是刻意不要的後端目錄重整與 typed planner。刪除本機與 origin 的分支，並移除殘留的空目錄 `tests/backend/typed_planner`。分支尖端 SHA 記錄於此以備救回（GitHub 端 90 天內也可用 reflog／API 復原）：
+`project-refactor` 7b15141c1dfa00e0ee165b34d7272f37bf70b6a2、
+`web-ux-audit-low-risk` 9952315b6b3a006dd0ca9b63ef35e01039d2cd9f、
+`web-planner-redesign` d46699d1168731db3e1352438a5051944ed793f7。
+
 ## 2026-09-08 名額判定欄位查清（TODO 的假設是錯的）＋過期學期停止輪詢
 
 查證來源：querycourse 的 `app.js` 標籤表（權威，不是猜的）——
