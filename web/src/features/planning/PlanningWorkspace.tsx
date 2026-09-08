@@ -281,15 +281,13 @@ function EnrollmentCountBadge({
 }
 
 function planningModeLabel(mode: PlanningMode): string {
-  if (mode === 'lottery') return '初選志願';
-  if (mode === 'addDrop') return '加退選';
-  return '加簽追蹤';
+  return mode === 'lottery' ? '初選志願' : '加退選';
 }
 
 function planningModeDescription(mode: PlanningMode): string {
-  if (mode === 'lottery') return '同時段多門課會視為競爭志願，抽中一門後其他同時段或同課名志願會失效。';
-  if (mode === 'addDrop') return '加退選接近先搶先贏，同時段課程應視為真衝堂並在送出前處理。';
-  return '追蹤教授、Email、第一次上課與授權碼狀態，不納入自動送出。';
+  return mode === 'lottery'
+    ? '同時段多門課會視為競爭志願，抽中一門後其他同時段或同課名志願會失效。'
+    : '加退選接近先搶先贏，同時段課程應視為真衝堂並在送出前處理。';
 }
 
 function scheduledCredits(courses: Course[]): number {
@@ -347,7 +345,6 @@ export function PlanningWorkspace({
   const modeOptions: Array<{ value: PlanningMode; label: string }> = [
     { value: 'lottery', label: '初選志願' },
     { value: 'addDrop', label: '加退選' },
-    { value: 'addCode', label: '加簽追蹤' },
   ];
 
   return (

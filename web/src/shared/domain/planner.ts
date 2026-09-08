@@ -60,7 +60,9 @@ export type ManualSearchSummary = {
 
 export type CapacityStatus = 'available' | 'full' | 'unknown';
 export type CapacityFilter = 'all' | CapacityStatus;
-export type PlanningMode = 'lottery' | 'addDrop' | 'addCode';
+// 'addCode'（加簽追蹤）於 2026-09-08 移除：它沒有任何模式專屬行為（唯一的判斷是
+// `!== 'lottery'`），與 'addDrop' 完全等價；待加簽課程本身不依賴模式，仍照常顯示。
+export type PlanningMode = 'lottery' | 'addDrop';
 
 export type HistoricalScheduleLookup = {
   status: 'matched' | 'ambiguous' | 'missing' | 'skipped';
