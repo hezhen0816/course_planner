@@ -6,7 +6,10 @@ from typing import Any
 import requests
 
 from .utils import setup_logging, validate_semester
-from ..logging_setup import get_logger
+try:
+    from ..logging_setup import get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from logging_setup import get_logger
 
 logger = get_logger(__name__)
 

@@ -10,7 +10,10 @@ from typing import Dict, List, Optional
 
 from .env_manager import EnvManager
 from .utils import setup_logging
-from ..logging_setup import get_logger
+try:
+    from ..logging_setup import get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from logging_setup import get_logger
 
 # 設置日誌
 logger = get_logger(__name__)

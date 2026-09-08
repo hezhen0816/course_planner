@@ -7,7 +7,10 @@ import logging
 import time
 from functools import wraps
 from typing import Any, Dict, List, Optional, Tuple
-from ..logging_setup import get_logger
+try:
+    from ..logging_setup import get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from logging_setup import get_logger
 
 try:
     import requests
@@ -20,7 +23,10 @@ def setup_logging(level: int = logging.INFO, log_to_file: bool = True, log_to_co
 
     模組層級請改用 `get_logger(__name__)`；這支保留給既有呼叫端與 worker 進入點。
     """
-    from ..logging_setup import configure_worker_logging
+    try:
+        from ..logging_setup import configure_worker_logging
+    except ImportError:  # pragma: no cover
+        from logging_setup import configure_worker_logging
 
     return configure_worker_logging(level=level, log_to_file=log_to_file, log_to_console=log_to_console)
 

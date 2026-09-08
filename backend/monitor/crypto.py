@@ -4,7 +4,10 @@ from typing import Optional
 from cryptography.fernet import Fernet
 
 from ..credentials import CredentialStoreError, _fernet
-from ..logging_setup import get_logger
+try:
+    from ..logging_setup import get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from logging_setup import get_logger
 
 logger = get_logger(__name__)
 

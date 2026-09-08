@@ -42,7 +42,10 @@ def _parse_ts(value: Any) -> Optional[float]:
         return None
 from ..credentials import get_school_credentials_secret, CredentialStoreError
 from ..school_sessions import save_school_session_state, session_state_from_requests_session
-from ..logging_setup import configure_worker_logging, get_logger
+try:
+    from ..logging_setup import configure_worker_logging, get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from logging_setup import configure_worker_logging, get_logger
 
 # worker 是進入點：在這裡設定一次檔案與主控台 handler。
 # 模組本身只 get_logger，不設定，所以後端 import 到 monitor 模組時不會產生日誌檔。

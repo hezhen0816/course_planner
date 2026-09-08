@@ -27,9 +27,14 @@ from .api_client import NTUSTCourseAPI
 from .config import ConfigManager, CourseConfig, MonitorConfig
 from .enrollment import EnrollmentClient
 from .utils import setup_logging
-from ..config import TAIPEI
-from ..logging_setup import get_logger
-from ..time_utils import now
+try:
+    from ..config import TAIPEI
+    from ..time_utils import now
+    from ..logging_setup import get_logger
+except ImportError:  # pragma: no cover - supports `uvicorn app:app --app-dir backend`
+    from config import TAIPEI
+    from time_utils import now
+    from logging_setup import get_logger
 
 # 設置日誌
 logger = get_logger(__name__)
