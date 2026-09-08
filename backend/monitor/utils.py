@@ -7,6 +7,7 @@ import logging
 import time
 from functools import wraps
 from typing import Any, Dict, List, Optional, Tuple
+from ..logging_setup import get_logger
 
 try:
     import requests
@@ -15,59 +16,13 @@ except ImportError:
 
 
 def setup_logging(level: int = logging.INFO, log_to_file: bool = True, log_to_console: bool = False) -> logging.Logger:
-    """
-    設置日誌系統
-    
-    Args:
-        level: 日誌級別
-        log_to_file: 是否輸出到文件（默認 True）
-        log_to_console: 是否輸出到控制台（默認 False）
-        
-    Returns:
-        配置好的 logger
-    """
-    import os
-    from pathlib import Path
-    
-    logger = logging.getLogger('ntust_monitor')
-    logger.setLevel(level)
-    
-    # 避免重複添加 handler
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - [%(name)s] - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        
-        # 文件日誌處理器
-        if log_to_file:
-            # 創建 logs 目錄（如果不存在）
-            # Anchor at the repo root (backend/monitor/utils.py -> parents[2]) so the
-            # location does not depend on the launcher's cwd (uvicorn runs from backend/).
-            log_dir = Path(__file__).resolve().parents[2] / 'logs'
-            log_dir.mkdir(exist_ok=True)
-            
-            # 單一檔案 + 每日輪替，保留 7 天（舊檔名為 ntust_monitor.log.YYYY-MM-DD）。
-            # 之前依啟動日期命名且不輪替，長時間執行會無限成長。
-            from logging.handlers import TimedRotatingFileHandler
-            log_path = log_dir / "ntust_monitor.log"
+    """相容包裝：設定集中在 backend/logging_setup.py，由進入點呼叫一次。
 
-            file_handler = TimedRotatingFileHandler(
-                log_path, when='midnight', backupCount=7, encoding='utf-8', utc=False
-            )
-            file_handler.setLevel(level)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-        
-        # 控制台日誌處理器（可選）
-        if log_to_console:
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(level)
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-    
-    return logger
+    模組層級請改用 `get_logger(__name__)`；這支保留給既有呼叫端與 worker 進入點。
+    """
+    from ..logging_setup import configure_worker_logging
 
+    return configure_worker_logging(level=level, log_to_file=log_to_file, log_to_console=log_to_console)
 
 def find_course_by_identifier(
     courses: List[Any],
@@ -427,7 +382,8 @@ def get_proxy_info_for_logging(session_proxies: Optional[Dict], env_manager: Opt
 
 
 # 與 worker／client 共用同一棵 logger（setup_logging 設定的是 'ntust_monitor'）
-logger = logging.getLogger('ntust_monitor')
+
+logger = get_logger(__name__)
 
 
 # --- 共用的 requests session 建立 ---------------------------------------------

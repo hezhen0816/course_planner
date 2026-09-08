@@ -23,10 +23,6 @@
 - [ ] iOS 新增監聽狀態頁（讀 `monitored_courses` 與 `system_logs`），可延後。
 - [ ] iOS 課堂筆記／成績試算已裝機（2026-09-09），尚未實機操作驗證：從課表點課程 → 課堂筆記 → 填評分項目 → 儲存後，回網頁版確認 `gradingPolicy` 有寫入且 `scheduledOffering`、認列、雙主修系所設定都沒被抹掉。
 
-## P2 重構／共用（2026-09-08 子代理審查 backend/monitor 與 backend 重複處，按價值排序）
-
-- [ ] 日誌：`monitor/utils.setup_logging` 是唯一的集中設定，Compass 其他模組各自 `getLogger`；抽成 `backend/logging_setup.py`。
-- [ ] 時區：`monitor/monitor.py` 內嵌 `ZoneInfo('Asia/Taipei')`，改用 `backend/time_utils.now`。
 
 ## 需使用者裁示
 

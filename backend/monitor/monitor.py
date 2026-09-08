@@ -10,7 +10,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Dict, Optional
-from zoneinfo import ZoneInfo
 
 # Thread-local storage：讓加選執行緒在呼叫通知方法時，
 # 傳遞正確的 user_id，避免被主迴圈覆蓋造成 Race Condition。
@@ -28,9 +27,12 @@ from .api_client import NTUSTCourseAPI
 from .config import ConfigManager, CourseConfig, MonitorConfig
 from .enrollment import EnrollmentClient
 from .utils import setup_logging
+from ..config import TAIPEI
+from ..logging_setup import get_logger
+from ..time_utils import now
 
 # 設置日誌
-logger = setup_logging()
+logger = get_logger(__name__)
 
 console = Console()
 
@@ -460,11 +462,11 @@ class CourseMonitor:
                                 s = s[:10] + 'T' + (s[10:].strip() if len(s) > 10 else '00:00')
                             dt = datetime.fromisoformat(s)
                             if dt.tzinfo is None:
-                                dt = dt.replace(tzinfo=ZoneInfo('Asia/Taipei'))
+                                dt = dt.replace(tzinfo=TAIPEI)
                             return dt
                         start_dt = _parse_dt(start_str)
                         end_dt = _parse_dt(end_str)
-                        now_tw = datetime.now(ZoneInfo('Asia/Taipei'))
+                        now_tw = now()
                         within = start_dt <= now_tw <= end_dt
                         if not within:
                             can_try_auto_enroll = False

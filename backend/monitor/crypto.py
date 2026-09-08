@@ -4,8 +4,9 @@ from typing import Optional
 from cryptography.fernet import Fernet
 
 from ..credentials import CredentialStoreError, _fernet
+from ..logging_setup import get_logger
 
-logger = logging.getLogger('ntust_monitor')
+logger = get_logger(__name__)
 
 
 class CryptoError(RuntimeError):

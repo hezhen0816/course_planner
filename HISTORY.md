@@ -20,6 +20,13 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 日誌集中；順帶修掉兩個實際缺陷
+
+抽成 `backend/logging_setup.py`：模組只 `get_logger(__name__)`（掛在 `ntust_monitor` 底下），handler 只由進入點設定。過程中查出兩個真問題：
+1. **後端與 worker 會寫同一個輪替檔**。`setup_logging()` 是在模組 import 時呼叫，而 `tr_rooms` 開始共用 `monitor.semester` 之後，FastAPI 後端 import 就會掛上 `ntust_monitor.log` 的 `TimedRotatingFileHandler`，兩個 process 午夜輪替會互搶。改成只有 worker 進入點呼叫 `configure_worker_logging(log_to_console=True)`；實測 `import backend.app` 後 handlers 為空、`import worker` 後才有檔案與 stdout。
+2. **`email_sender` 的日誌等於丟掉**。它用 `getLogger(__name__)`，那棵樹與 root 都沒有 handler，寄信失敗看不到；改用 `get_logger` 後會進 `ntust_monitor.log`。
+時區：`monitor.py` 內嵌的 `ZoneInfo('Asia/Taipei')` 改用 `config.TAIPEI` 與 `time_utils.now()`。其餘 `datetime.now()` 是顯示用的 naive 時間，主機本地時間即台北，改成 aware 反而可能與其他 naive 值比較出錯，維持原樣。
+
 ## 2026-09-09 後端共用：build_session 與學期偵測合一；學校端知識寫成文件
 
 `NTUST_VERIFY_SSL` 原本在 `config.py`、`api_client.py`、`enrollment.py` 各解析一次，`urllib3.disable_warnings` 呼叫兩次，`_setup_proxy` 在兩個 client 各有一份幾乎相同的實作。收成 `monitor/utils.py` 的 `resolve_verify_ssl`／`proxies_from_env`／`build_session`（SOCKS5 一律轉 socks5h 走 session.proxies，不動全域 socket），兩個 client 共用。

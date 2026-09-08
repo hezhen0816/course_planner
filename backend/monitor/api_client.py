@@ -14,11 +14,12 @@ from .env_manager import EnvManager
 from .semester import fetch_semester_candidates, get_default_semester
 from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, _is_network_disconnected, build_session
 from ..tr_rooms import fetch_query_courses_filtered
+from ..logging_setup import get_logger
 
 # 禁用 SSL 警告（如果禁用驗證）
 
 # 設置日誌
-logger = setup_logging()
+logger = get_logger(__name__)
 
 
 class NTUSTCourseAPI:

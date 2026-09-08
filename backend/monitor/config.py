@@ -10,9 +10,10 @@ from typing import Dict, List, Optional
 
 from .env_manager import EnvManager
 from .utils import setup_logging
+from ..logging_setup import get_logger
 
 # 設置日誌
-logger = setup_logging()
+logger = get_logger(__name__)
 
 
 @dataclass

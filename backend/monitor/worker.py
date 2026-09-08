@@ -42,23 +42,13 @@ def _parse_ts(value: Any) -> Optional[float]:
         return None
 from ..credentials import get_school_credentials_secret, CredentialStoreError
 from ..school_sessions import save_school_session_state, session_state_from_requests_session
+from ..logging_setup import configure_worker_logging, get_logger
 
-# Setup logging
-# Ensure console logging is enabled even if setup_logging was called by imports
-logger = logging.getLogger('ntust_monitor')
-has_console = False
-for h in logger.handlers:
-    # FileHandler inherits from StreamHandler, so we must explicitly check it's NOT a FileHandler
-    if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
-        has_console = True
-        break
-
-if not has_console:
-    console_handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(asctime)s - [%(name)s] - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-logger.setLevel(logging.INFO)
+# worker 是進入點：在這裡設定一次檔案與主控台 handler。
+# 模組本身只 get_logger，不設定，所以後端 import 到 monitor 模組時不會產生日誌檔。
+# 主控台輸出給工作排程器導向 logs\monitor.log。
+configure_worker_logging(log_to_console=True)
+logger = get_logger(__name__)
 
 
 class SupabaseMonitor(CourseMonitor):

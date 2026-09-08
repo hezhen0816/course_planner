@@ -6,8 +6,9 @@ from typing import Any
 import requests
 
 from .utils import setup_logging, validate_semester
+from ..logging_setup import get_logger
 
-logger = setup_logging()
+logger = get_logger(__name__)
 
 SEMESTERS_INFO_URL = "https://querycourse.ntust.edu.tw/QueryCourse/api/semestersinfo"
 def _guess_semester_from_date() -> str:

@@ -23,11 +23,12 @@ from .config import CourseConfig
 from .env_manager import EnvManager
 from .utils import setup_logging, is_proxy_configured, get_proxy_info_for_logging, build_session
 from ..ntust_common import captcha_required, is_hidden_element, login_to_target
+from ..logging_setup import get_logger
 
 # 禁用 SSL 警告（如果禁用驗證）
 
 # 設置日誌
-logger = setup_logging()
+logger = get_logger(__name__)
 
 
 class EnrollmentClient:
