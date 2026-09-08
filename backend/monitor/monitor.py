@@ -657,6 +657,7 @@ class CourseMonitor:
                 if not is_rate_limited and not is_not_open:
                     with self.state_lock:
                         ea[identifier] = current_attempts + 1
+                    self._persist_attempt_count(course, current_attempts + 1)
 
                 # 通知中的次數使用實際送出時的次數
             attempts = current_attempts
@@ -739,6 +740,10 @@ class CourseMonitor:
             with self._active_tasks_lock:
                 if task_key in self._active_enroll_tasks:
                     self._active_enroll_tasks.remove(task_key)
+
+    def _persist_attempt_count(self, course: CourseConfig, attempts: int) -> None:
+        """把最新的加選嘗試次數寫回持久儲存（基底不做事；Supabase worker 覆寫）。"""
+        course.attempt_count = attempts
 
     def _handle_enroll_success(self, course: CourseConfig) -> None:
         """處理加選成功後的邏輯（如禁用自動加選、更新配置）"""

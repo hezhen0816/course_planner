@@ -311,10 +311,11 @@ class SupabaseMonitor(CourseMonitor):
                             semester=c_data.get('semester') or get_default_semester(verify_ssl=settings.get('verify_ssl', True)),
                             alias=c_data.get('course_name', ''),
                             auto_enroll=c_data.get('auto_enroll', False),
-                            max_enroll_attempts=c_data.get('max_attempts', 3)
+                            max_enroll_attempts=int(c_data.get('max_attempts') or 3),
+                            attempt_count=int(c_data.get('attempt_count') or 0),
                         )
                         course.db_id = c_data.get('id')
-                        course.reset_attempts = c_data.get('reset_attempts', False)
+                        self._sync_attempt_count_from_db(user_id, course)
                         user_courses.append(course)
 
                     # 校務帳密以 app_private.school_credentials 為準（Compass 統一保存），
@@ -478,6 +479,36 @@ class SupabaseMonitor(CourseMonitor):
                 logger.error(f"更新課程資料失敗 {course.alias}：{e}")
                 
         return success
+
+    def _sync_attempt_count_from_db(self, user_id: str, course: CourseConfig) -> None:
+        """以資料庫的 attempt_count 校正記憶體中的嘗試次數。
+
+        規則：資料庫為 0（前端重設）時直接採用並清掉「已達上限」通知節流；
+        否則取兩者較大值，避免加選執行緒剛寫入、這裡又讀到舊值而多試一次。
+        """
+        identifier = self._get_course_identifier(course)
+        db_count = int(course.attempt_count or 0)
+        with self.state_lock:
+            ea = self.enrollment_attempts_per_user.setdefault(user_id, {})
+            mem_count = ea.get(identifier, 0)
+            if db_count == 0:
+                if mem_count > 0:
+                    logger.info(f"[{user_id[:8]}] 已重設課程 {course.alias} 的加選次數（原 {mem_count}）")
+                    self._limit_notified_at.pop((user_id, identifier), None)
+                ea[identifier] = 0
+            else:
+                ea[identifier] = max(mem_count, db_count)
+            course.attempt_count = ea[identifier]
+
+    def _persist_attempt_count(self, course: CourseConfig, attempts: int) -> None:
+        """Override: 把嘗試次數寫回 monitored_courses.attempt_count，worker 重啟不歸零。"""
+        course.attempt_count = attempts
+        if not getattr(course, 'db_id', None):
+            return
+        try:
+            self._db_update_with_retry('monitored_courses', {'attempt_count': attempts}, 'id', course.db_id)
+        except Exception as e:
+            logger.error(f"寫入加選次數失敗 {course.alias}：{e}")
 
     def _handle_enroll_success(self, course: CourseConfig) -> None:
         """Override to update Supabase when enrollment succeeds"""
@@ -714,19 +745,6 @@ class SupabaseMonitor(CourseMonitor):
 
                 user_monitor.enrollment_attempts = user_monitor.enrollment_attempts_per_user.get(user_id, {})
                 user_monitor.course_states = user_monitor.course_states_per_user.get(user_id, {})
-
-                for course in user_monitor.config.courses:
-                    if getattr(course, 'reset_attempts', False):
-                        identifier = user_monitor._get_course_identifier(course)
-                        user_monitor.enrollment_attempts.pop(identifier, None)
-                        if hasattr(user_monitor, '_limit_notified_at'):
-                            limit_key = (user_id, identifier)
-                            user_monitor._limit_notified_at.pop(limit_key, None)
-                        try:
-                            user_monitor.supabase.table('monitored_courses').update({'reset_attempts': False}).eq('id', course.db_id).execute()
-                            logger.info(f"[{uid_short}] 已重設課程 {course.alias} 的加選次數")
-                        except Exception as e:
-                            logger.warning(f"[{uid_short}] 更新 reset_attempts 失敗: {e}")
 
                 loop_start = time.time()
                 user_monitor.check_all_courses(silent=True)

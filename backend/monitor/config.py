@@ -24,6 +24,7 @@ class CourseConfig:
     alias: str = ""  # 別名（用於顯示）
     auto_enroll: bool = False  # 是否啟用自動加選
     max_enroll_attempts: int = 3  # 最大加選嘗試次數
+    attempt_count: int = 0  # 已嘗試加選次數（資料庫來源；worker 重啟不歸零）
     
     def __post_init__(self):
         """初始化後處理"""

@@ -24,6 +24,7 @@ interface Course {
   auto_enroll: boolean;
   last_check_time: string;
   max_attempts: number;
+  attempt_count: number;
   semester: string;
 }
 
@@ -137,7 +138,7 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
           <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
             <div>
               <div className="text-sm font-medium text-amber-800">重設加選次數</div>
-              <div className="text-xs text-amber-600 mt-0.5">將此課程的已嘗試次數歸零，下次檢查時會重新嘗試加選</div>
+              <div className="text-xs text-amber-600 mt-0.5">目前已嘗試 {course.attempt_count ?? 0} 次；歸零後下次檢查時會重新嘗試加選</div>
             </div>
             <button
               onClick={async () => {
@@ -145,10 +146,10 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
                 try {
                   const { error } = await supabase
                     .from('monitored_courses')
-                    .update({ reset_attempts: true })
+                    .update({ attempt_count: 0 })
                     .eq('id', course.id);
                   if (error) throw error;
-                  alert('已送出重設請求，Worker 將於下次檢查時處理。');
+                  alert('已重設加選次數，Worker 下次檢查時會重新嘗試加選。');
                   onSaved();
                   onClose();
                 } catch (e) {
@@ -500,6 +501,14 @@ const CoursesView: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                       <span>人數: <span className={isAvailable ? 'text-green-600 font-medium' : 'text-slate-700'}>{course.current_enrolled}</span></span>
+                      {course.auto_enroll && (
+                        <span
+                          title="加選嘗試次數／上限"
+                          className={(course.attempt_count ?? 0) >= (course.max_attempts ?? 3) ? 'text-red-600 font-medium' : ''}
+                        >
+                          加選 {course.attempt_count ?? 0}/{course.max_attempts ?? 3}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Clock size={13} />
                         {course.last_check_time ? new Date(course.last_check_time).toLocaleTimeString() : '---'}

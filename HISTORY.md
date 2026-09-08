@@ -16,6 +16,11 @@
 
 ---
 
+## 2026-09-08 加選嘗試次數改存資料庫；查出正式庫缺 `max_attempts`／`reset_attempts` 欄位
+
+查證：以 service key 讀 `monitored_courses` 一列，正式庫只有 baseline migration 的 10 個欄位，沒有前端與 worker 都在用的 `max_attempts`、`reset_attempts`（兩者從未進 migration）。前端「課程設定」存檔與「重設次數」因此一直回 PostgREST 欄位不存在錯誤；worker 用 `.get` 預設值所以沒察覺。
+決策：新增 migration `20260908150000_monitored_courses_attempt_count.sql` 建 `max_attempts`（預設 3）與 `attempt_count`（預設 0），不建 `reset_attempts`：前端重設直接把 `attempt_count` 寫 0。worker 每次讀設定時以資料庫值校正記憶體：資料庫為 0 就歸零並清除「已達上限」通知節流，否則取較大值（避免加選執行緒剛寫入、讀設定時讀到舊值而多試一次）；每次實際送出加選後同步寫回 `attempt_count`。
+
 ## 2026-09-08 名稱統一與清理
 
 Supabase 專案改名 `course-compass`（ref 不變）；Vercel 專案 `ntust-course-monitor` 刪除（使用者自行告知同學新網址，先前做的 307 轉址隨之失效）；GitHub `NTUST_Course_Monitor` 封存；Windows 上 `NTUST_Course_Monitor` 排程工作解除登記、checkout 移到 `_retired\`。本機 `course_planner` 資料夾與 `~/.venvs/course_planner` 刻意不改名（要連動腳本與設定，收益只有好看）。
