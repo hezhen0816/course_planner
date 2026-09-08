@@ -12,7 +12,8 @@
 # - 只有這次前進區間改到相關檔案才動：web/ 變了才 build + scp dist；backend/*.py 或
 #   requirements 變了才重啟後端；backend/ 任何 .py 或 requirements 變了才重啟 worker
 #   （worker 重啟會中斷監控幾秒並重做預先登入，純文件 commit 不該觸發）。
-# - Stop-Process 只殺該任務自己的 python（看命令列），不再一刀殺掉所有 course-compass python。
+# - 重啟由 repo 內的 restart_task.ps1 執行：只殺該任務自己的 python（命令列標記＋repo 路徑或父行程），
+#   不再一刀殺掉所有 course-compass python。
 # - 煙霧測試打 tailnet 入口（同學／手機實際走的那條路），不是 loopback。
 set -euo pipefail
 
@@ -35,8 +36,8 @@ done
 
 win() { ssh -o BatchMode=yes "$SSH_HOST" "$@"; }
 win_ps() { ssh -o BatchMode=yes "$SSH_HOST" "powershell -NoProfile -Command \"$1\""; }
-restart_task() {  # $1 task name, $2 substring that identifies its python command line
-  win_ps "Stop-ScheduledTask $1; Get-CimInstance Win32_Process | Where-Object { \$_.Name -eq 'python.exe' -and \$_.CommandLine -like '*course-compass*' -and \$_.CommandLine -like '*$2*' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }; Start-Sleep 2; Start-ScheduledTask $1; Start-Sleep 2; (Get-ScheduledTask $1).State"
+restart_task() {  # $1 task name, $2 substring that identifies its python command line (see restart_task.ps1)
+  win "powershell -NoProfile -ExecutionPolicy Bypass -File $WIN_REPO_BACKSLASH\\scripts\\deployment\\restart_task.ps1 -Task $1 -Marker $2" | tr -d '\r' | sed 's/^/    /'
 }
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
