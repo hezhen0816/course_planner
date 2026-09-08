@@ -114,6 +114,13 @@ enum PlannerGenEdDimension: String, CaseIterable, Identifiable {
 }
 
 
+struct PlannerGradingItem: Identifiable, Equatable {
+    var id: String = UUID().uuidString
+    var name: String = ""
+    var weight: Double = 0
+    var score: Double?
+}
+
 struct PlannerCourse: Identifiable, Equatable {
     var id = UUID()
     var name: String
@@ -122,9 +129,34 @@ struct PlannerCourse: Identifiable, Equatable {
     var program: PlannerCourseProgram
     var dimension: PlannerGenEdDimension = .none
     var instructor: String = ""
+    var email: String = ""
     var location: String = ""
     var time: String = ""
+    var link: String = ""
     var notes: String = ""
+    var gradingPolicy: [PlannerGradingItem] = []
+    /// 網頁版專有欄位原樣保存（scheduledOffering、認列來源等），iOS 只負責原封送回。
+    var extras: [String: JSONValue] = [:]
+
+    /// 課碼取自網頁版寫入的 scheduledOffering，用來把課表格子對應到這門課。
+    var courseNo: String {
+        guard case .object(let offering)? = extras["scheduledOffering"],
+              case .string(let value)? = offering["courseNo"] else { return "" }
+        return value
+    }
+
+    /// 已填權重合計；用來提醒「總權重未達 100%」。
+    var totalWeight: Double {
+        gradingPolicy.reduce(0) { $0 + $1.weight }
+    }
+
+    /// 依已填分數與權重換算的目前總分（權重為 0 時回 0）。
+    var projectedScore: Double {
+        let scored = gradingPolicy.filter { $0.score != nil }
+        let weight = scored.reduce(0) { $0 + $1.weight }
+        guard weight > 0 else { return 0 }
+        return scored.reduce(0) { $0 + ($1.score ?? 0) * $1.weight } / weight
+    }
 }
 
 struct PlannerSemester: Identifiable, Equatable {

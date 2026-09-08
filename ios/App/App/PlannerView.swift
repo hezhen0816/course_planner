@@ -3,9 +3,7 @@ import SwiftUI
 struct PlannerView: View {
     @EnvironmentObject private var store: AppSessionStore
     @State private var expandedSemesters: Set<UUID> = []
-    @State private var addSemester: PlannerSemester?
     @State private var selectedCourseContext: PlannerCourseContext?
-    @State private var isTargetSheetPresented = false
 
     var body: some View {
         ScrollView {
@@ -21,36 +19,11 @@ struct PlannerView: View {
         }
         .background(Color(.systemGroupedBackground))
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(item: $addSemester) { semester in
-            CourseEditorSheet(
-                title: "新增課程",
-                initialCourse: PlannerCourse(
-                    name: "",
-                    credits: 3,
-                    category: .compulsory,
-                    program: .home
-                ),
-                onSave: { newCourse in
-                    store.addCourse(newCourse, to: semester.id)
-                }
-            )
-        }
         .sheet(item: $selectedCourseContext) { context in
-            CourseDetailSheet(
-                semesterName: context.semesterName,
-                initialCourse: context.course,
-                onSave: { updatedCourse in
-                    store.updateCourse(updatedCourse, in: context.semesterID)
-                }
-            )
-        }
-        .sheet(isPresented: $isTargetSheetPresented) {
-            TargetSettingsSheet(
-                initialTargets: store.plannerTargets,
-                onSave: { targets in
-                    store.updateTargets(targets)
-                }
-            )
+            NavigationStack {
+                CourseNoteEditor(semesterID: context.semesterID, course: context.course)
+                    .environmentObject(store)
+            }
         }
         .onAppear {
             if expandedSemesters.isEmpty, let firstSemester = store.plannerSemesters.first?.id {
@@ -74,16 +47,10 @@ struct PlannerView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Button {
-                isTargetSheetPresented = true
-            } label: {
-                Label("設定畢業門檻", systemImage: "slider.horizontal.3")
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.indigo)
+            Label("新增課程與畢業門檻請在網頁版調整；手機專注在課表、課堂筆記與成績試算。", systemImage: "info.circle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -220,15 +187,6 @@ struct PlannerView: View {
                                 .buttonStyle(.plain)
                             }
 
-                            Button {
-                                addSemester = semester
-                            } label: {
-                                Label("新增課程", systemImage: "plus")
-                                    .font(.headline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                            }
-                            .buttonStyle(.bordered)
                         }
                     }
                 }
@@ -274,165 +232,6 @@ struct PlannerProgressRow: View {
             ProgressView(value: min(current, target), total: max(target, 1))
                 .tint(tint)
         }
-    }
-}
-
-struct CourseEditorSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var course: PlannerCourse
-
-    let title: String
-    let onSave: (PlannerCourse) -> Void
-
-    init(title: String, initialCourse: PlannerCourse, onSave: @escaping (PlannerCourse) -> Void) {
-        self.title = title
-        self.onSave = onSave
-        _course = State(initialValue: initialCourse)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("基本資訊") {
-                    TextField("課程名稱", text: $course.name)
-                    TextField("授課老師", text: $course.instructor)
-                    TextField("上課地點", text: $course.location)
-                    TextField("上課時間", text: $course.time)
-                    TextField("學分", value: $course.credits, format: .number)
-                        .keyboardType(.decimalPad)
-                }
-
-                Section("課程分類") {
-                    Picker("類別", selection: $course.category) {
-                        ForEach(PlannerCourseCategory.allCases) { category in
-                            Text(category.title).tag(category)
-                        }
-                    }
-
-                    Picker("歸屬", selection: $course.program) {
-                        ForEach(PlannerCourseProgram.allCases) { program in
-                            Text(program.title).tag(program)
-                        }
-                    }
-
-                    if course.category == .genEd {
-                        Picker("通識向度", selection: $course.dimension) {
-                            ForEach(PlannerGenEdDimension.allCases) { dimension in
-                                Text(dimension.title).tag(dimension)
-                            }
-                        }
-                    }
-                }
-
-                Section("備註") {
-                    TextEditor(text: $course.notes)
-                        .frame(minHeight: 120)
-                }
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("儲存") {
-                        onSave(course)
-                        dismiss()
-                    }
-                    .disabled(course.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
-        .presentationDetents([.large])
-    }
-}
-
-struct CourseDetailSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var course: PlannerCourse
-
-    let semesterName: String
-    let onSave: (PlannerCourse) -> Void
-
-    init(semesterName: String, initialCourse: PlannerCourse, onSave: @escaping (PlannerCourse) -> Void) {
-        self.semesterName = semesterName
-        self.onSave = onSave
-        _course = State(initialValue: initialCourse)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(semesterName)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(course.name)
-                            .font(.title3.weight(.bold))
-                        HStack(spacing: 12) {
-                            Label("\(course.credits, specifier: "%.0f") 學分", systemImage: "graduationcap")
-                            Label(course.category.title, systemImage: "tag")
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section("授課資訊") {
-                    TextField("授課老師", text: $course.instructor)
-                    TextField("上課地點", text: $course.location)
-                    TextField("上課時間", text: $course.time)
-                }
-
-                Section("課程屬性") {
-                    Picker("類別", selection: $course.category) {
-                        ForEach(PlannerCourseCategory.allCases) { category in
-                            Text(category.title).tag(category)
-                        }
-                    }
-
-                    Picker("歸屬", selection: $course.program) {
-                        ForEach(PlannerCourseProgram.allCases) { program in
-                            Text(program.title).tag(program)
-                        }
-                    }
-
-                    if course.category == .genEd {
-                        Picker("通識向度", selection: $course.dimension) {
-                            ForEach(PlannerGenEdDimension.allCases) { dimension in
-                                Text(dimension.title).tag(dimension)
-                            }
-                        }
-                    }
-                }
-
-                Section("筆記") {
-                    TextEditor(text: $course.notes)
-                        .frame(minHeight: 150)
-                }
-            }
-            .navigationTitle("課程詳情")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("關閉") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("儲存") {
-                        onSave(course)
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
     }
 }
 

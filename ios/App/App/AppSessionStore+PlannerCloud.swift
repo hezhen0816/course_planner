@@ -111,15 +111,20 @@ extension AppSessionStore {
                             dimension: cloudDimension(for: course.dimension),
                             details: CloudCourseDetails(
                                 professor: course.instructor.isEmpty ? nil : course.instructor,
-                                email: nil,
+                                email: course.email.isEmpty ? nil : course.email,
                                 location: course.location.isEmpty ? nil : course.location,
                                 time: course.time.isEmpty ? nil : course.time,
-                                link: nil,
-                                gradingPolicy: [],
+                                link: course.link.isEmpty ? nil : course.link,
+                                gradingPolicy: course.gradingPolicy.map {
+                                    CloudGradingItem(id: $0.id, name: $0.name, weight: $0.weight, score: $0.score)
+                                },
                                 notes: course.notes.isEmpty ? nil : course.notes
-                            )
+                            ),
+                            // 網頁版專有欄位原樣送回，否則手機存一次就整組不見
+                            extras: course.extras
                         )
-                    }
+                    },
+                    extras: semesterExtras[semester.id] ?? [:]
                 )
             },
             targets: CloudTargets(
@@ -136,7 +141,8 @@ extension AppSessionStore {
             ),
             settings: CloudUserSettings(
                 schoolAccount: schoolAccount.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-                reminderMinutes: reminderMinutes
+                reminderMinutes: reminderMinutes,
+                extras: settingsExtras
             )
         )
     }
@@ -171,14 +177,27 @@ extension AppSessionStore {
                         program: plannerProgram(from: course.program),
                         dimension: plannerDimension(from: course.dimension),
                         instructor: course.details?.professor ?? "",
+                        email: course.details?.email ?? "",
                         location: course.details?.location ?? "",
                         time: course.details?.time ?? "",
-                        notes: course.details?.notes ?? ""
+                        link: course.details?.link ?? "",
+                        notes: course.details?.notes ?? "",
+                        gradingPolicy: (course.details?.gradingPolicy ?? []).map {
+                            PlannerGradingItem(id: $0.id, name: $0.name, weight: $0.weight, score: $0.score)
+                        },
+                        extras: course.extras
                     )
                 }
             )
         }
 
+        semesterExtras = Dictionary(
+            (payload.semesters ?? []).compactMap { semester -> (UUID, [String: JSONValue])? in
+                guard let id = UUID(uuidString: semester.id), !semester.extras.isEmpty else { return nil }
+                return (id, semester.extras)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
         plannerSemesters = semesters.isEmpty ? Self.blankPlannerSemesters() : semesters
     }
 
@@ -187,6 +206,7 @@ extension AppSessionStore {
         self.schoolAccount = settings?.schoolAccount?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.schoolPassword = ""
         self.reminderMinutes = settings?.reminderMinutes ?? 10
+        self.settingsExtras = settings?.extras ?? [:]
         isRestoringPersistedState = false
     }
 

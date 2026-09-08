@@ -20,6 +20,13 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 iOS：課表變成課堂筆記入口、補上成績試算、修掉存檔會抹掉網頁資料的問題
+
+查證到的資料遺失面（DB trigger 對 `semesters`／`settings`／`targets` 是「incoming 有就整包取代」）：iOS 的 `CloudCourse` 沒有 `scheduledOffering`，`cloudAppDataPayload()` 還把 `email`／`link`／`gradingPolicy` 寫死成 `nil`／`[]`，`CloudUserSettings` 也不含 `programDepartments`。所以在手機改一門課的老師名字，就會抹掉網頁版的課碼、節次、教室、必選修、Email、課程連結、整份成績試算權重與雙主修輔系系所設定。六位使用者的 `last_writer` 都還是 `web`、33 門課的 `scheduledOffering` 都完整，所以尚未實際發生。
+做法：`CloudCourse`／`CloudSemester`／`CloudUserSettings` 改為保留未知欄位（新增 `JSONValue` 與動態鍵，未知鍵原樣進出），`PlannerCourse` 補 `email`／`link`／`gradingPolicy`／`extras`，兩個方向都完整對應。
+定位：使用者指出會用到課堂筆記的時機是上課當下，入口應該在課表而不是學分規劃區。課表格子的詳情頁加「課堂筆記與成績試算」，與學分規劃共用同一支 `CourseNoteEditor`（教授／Email／地點／時間／課程連結／備註＋評分項目權重與分數，顯示總權重與依已填分數換算的目前總分）。手機原本沒有成績試算 UI，這次補上，與網頁版共用同一份 `gradingPolicy`。
+同時移除手機端的「新增課程」與規劃頁的「設定畢業門檻」入口（門檻改在設定頁調整，`CloudTargets` 欄位齊全所以安全），避免手機再長出第二套殘缺編輯器；`CourseEditorSheet`、`CourseDetailSheet` 一併刪除。
+
 ## 2026-09-09 同步拆成三項並重新命名；已保存密碼不再每次要求輸入
 
 命名：原本「課表與成績」／「官方選課狀態」不精確——加退選也是官方狀態，差別在**階段與用途**。改成「目前選課」（選課清單＋功課表，`ChooseList/D01/D01`）、「歷年成績」（`StuScoreQuery/DisplayAll`）、「初選志願登記」（A02 已登記志願與志願序）。

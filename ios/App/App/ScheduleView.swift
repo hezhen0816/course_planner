@@ -80,6 +80,7 @@ struct ScheduleView: View {
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $selectedCourseDetail) { detail in
             ScheduleCourseDetailSheet(entries: detail.entries)
+                .environmentObject(store)
         }
     }
 
@@ -417,6 +418,7 @@ private struct CourseDetailSelection: Identifiable {
 }
 
 private struct ScheduleCourseDetailSheet: View {
+    @EnvironmentObject private var store: AppSessionStore
     let entries: [ScheduleEntry]
 
     var body: some View {
@@ -425,6 +427,20 @@ private struct ScheduleCourseDetailSheet: View {
                 VStack(alignment: .leading, spacing: 14) {
                     ForEach(entries) { entry in
                         CourseDetailCard(entry: entry)
+                        // 課表是進入課堂筆記與成績試算最自然的入口：上課當下就在看課表
+                        if let context = store.plannerCourseContext(forTitle: entry.title) {
+                            NavigationLink {
+                                CourseNoteEditor(semesterID: context.semesterID, course: context.course)
+                                    .environmentObject(store)
+                            } label: {
+                                Label("課堂筆記與成績試算", systemImage: "square.and.pencil")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(entry.accent.tint)
+                        }
                     }
                 }
                 .padding(20)
@@ -609,5 +625,94 @@ private extension Weekday {
         case .saturday, .sunday:
             return false
         }
+    }
+}
+
+
+/// 課堂筆記與成績試算。手機端只編輯這些「上課當下會記」的欄位；
+/// 學分、類別、認列歸屬等規劃性設定留在網頁版，避免手機再長出一套殘缺的編輯器。
+/// 課表與學分規劃兩個入口共用同一支，不再各有一套。
+struct CourseNoteEditor: View {
+    @EnvironmentObject private var store: AppSessionStore
+    @Environment(\.dismiss) private var dismiss
+
+    let semesterID: PlannerSemester.ID
+    @State var course: PlannerCourse
+
+    var body: some View {
+        Form {
+            Section("課堂資訊") {
+                LabeledContent("課程") { Text(course.name).foregroundStyle(.secondary) }
+                TextField("授課教授", text: $course.instructor)
+                TextField("教授 Email", text: $course.email)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                TextField("上課地點", text: $course.location)
+                TextField("上課時間", text: $course.time)
+                TextField("課程連結", text: $course.link)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+            }
+
+            Section("備註") {
+                TextField("第一堂課的重點、評分方式、作業規定…", text: $course.notes, axis: .vertical)
+                    .lineLimit(3...10)
+            }
+
+            Section {
+                ForEach($course.gradingPolicy) { $item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("項目名稱（例如 期中考）", text: $item.name)
+                        HStack {
+                            LabeledContent("權重") {
+                                TextField("0", value: $item.weight, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            Text("%").foregroundStyle(.secondary)
+                        }
+                        LabeledContent("分數") {
+                            TextField("未輸入", value: $item.score, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .onDelete { offsets in
+                    course.gradingPolicy.remove(atOffsets: offsets)
+                }
+
+                Button {
+                    course.gradingPolicy.append(PlannerGradingItem())
+                } label: {
+                    Label("新增評分項目", systemImage: "plus.circle")
+                }
+            } header: {
+                Text("成績試算")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("目前總分 \(course.projectedScore, format: .number.precision(.fractionLength(1))) 分（依已填分數的權重換算）")
+                    Text(weightFooter)
+                        .foregroundStyle(course.totalWeight == 100 ? Color.secondary : Color.orange)
+                }
+            }
+        }
+        .navigationTitle("課堂筆記")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("儲存") {
+                    store.updateCourse(course, in: semesterID)
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private var weightFooter: String {
+        let total = course.totalWeight
+        if total == 100 { return "總權重 100%" }
+        return "總權重 \(total.formatted(.number.precision(.fractionLength(0))))%（未達 100%，試算僅依已填項目換算）"
     }
 }

@@ -45,6 +45,9 @@ final class AppSessionStore: ObservableObject {
             }
         }
     }
+    /// 網頁版專有欄位的原樣備份，存回雲端時一併送回（見 CloudModels 的 extras）
+    var settingsExtras: [String: JSONValue] = [:]
+    var semesterExtras: [UUID: [String: JSONValue]] = [:]
     @Published var syncState: ScheduleSyncState = .idle
     @Published var lastSyncedAt: Date?
     @Published var plannerTargets: PlannerTarget = .default
@@ -159,6 +162,21 @@ final class AppSessionStore: ObservableObject {
             }
             return partialResult + course.credits
         }
+    }
+
+    /// 由課表格子（只有課名，沒有課碼）找到規劃裡對應的那門課。
+    /// 同名時取課碼有值的那一門，其次取最後一個學期，因為課表顯示的一定是當學期。
+    func plannerCourseContext(forTitle title: String) -> (semesterID: PlannerSemester.ID, course: PlannerCourse)? {
+        let target = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else { return nil }
+        var fallback: (PlannerSemester.ID, PlannerCourse)?
+        for semester in plannerSemesters {
+            for course in semester.courses where course.name.trimmingCharacters(in: .whitespacesAndNewlines) == target {
+                if !course.courseNo.isEmpty { fallback = (semester.id, course) }
+                else if fallback == nil { fallback = (semester.id, course) }
+            }
+        }
+        return fallback
     }
 
     func addCourse(_ course: PlannerCourse, to semesterID: PlannerSemester.ID) {
