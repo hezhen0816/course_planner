@@ -20,6 +20,10 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 修課軌跡補上「修課中」：正在修的課原本被過濾掉
+
+`CourseTimelinePage` 的 `timelineSemesters` 是 `semester.courses.filter(isHistoryImportedCourse)`，只留有成績的歷史匯入課，於是校務同步寫入、還沒有成績的 12 門在修課程整批看不到——大二上因此只顯示 2 門待加簽。統計面板其實一直有算它們（`usePlannerStats` 走的是全部 `semester.courses`），所以是純顯示缺口。改為全部顯示，並以 `!isHistoryImportedCourse && !virtualSelection` 判定「修課中」（天藍色標籤），與歷史修課（綠）、待加簽／未來規劃（琥珀／藍）區分；摘要列多一格「修課中 N 門」。
+
 ## 2026-09-09 通識判定修正（第三碼 G）＋向度回查＋兩端顯示補齊
 
 查證：`categoryFromSyncedCourse` 只認 `GE` 開頭是通識，於是 `TCG039301 環境關懷與生態寫作`、`TCG100301 書法藝術` 因為學校標「必修」被歸成本系必修，讓通識少算、本系必修多算。抓 1151 全學期 2189 門統計課碼前綴與官方 `Dimension` 的關係：**第三碼是 G 的 14 個前綴（TCG/GE3/DTG/BAG/EEG/ADG/MBG/IBG/VEG/CXG/ECG/ETG/MEG/MIG）共 173 門，向度覆蓋率 100%，且沒有任何第三碼為 G 的課沒有向度**，因此以「課碼第三碼為 G 或 GE 開頭」判定通識，且必須早於 `required_type`。

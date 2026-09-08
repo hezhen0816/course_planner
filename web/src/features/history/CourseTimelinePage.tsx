@@ -39,9 +39,10 @@ export function CourseTimelinePage({
   onDeleteRecognitionRequirement,
   onOpenCourseDetail,
 }: CourseTimelinePageProps) {
+  // 原本只留歷史匯入的課，於是「正在修」的整批看不到——那正是使用者現在最想看的一群。
   const timelineSemesters = data.semesters.map((semester) => ({
     ...semester,
-    courses: semester.courses.filter(isHistoryImportedCourse),
+    courses: semester.courses,
     plannedSourceLabel: '',
   }));
   const plannedCourses = data.selectionPlan?.courses || [];
@@ -70,9 +71,14 @@ export function CourseTimelinePage({
             plannedSourceLabel: data.selectionPlan?.targetLabel || '未來規劃',
           },
         ];
-  const historyCount = timelineSemesters.reduce((sum, semester) => sum + semester.courses.length, 0);
+  const historyCount = timelineSemesters.reduce((sum, semester) => (
+    sum + semester.courses.filter(isHistoryImportedCourse).length
+  ), 0);
+  const inProgressCount = timelineSemesters.reduce((sum, semester) => (
+    sum + semester.courses.filter((course) => !isHistoryImportedCourse(course)).length
+  ), 0);
   const plannedCount = plannedCourses.length;
-  const totalCourses = historyCount + plannedCount;
+  const totalCourses = historyCount + inProgressCount + plannedCount;
   const requirementById = new Map(data.pendingRequirements.map((requirement) => [requirement.id, requirement]));
   const failedCount = timelineSemesters.reduce((sum, semester) => (
     sum + semester.courses.filter(isFailedImportedHistoryCourse).length
@@ -84,11 +90,12 @@ export function CourseTimelinePage({
         <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">修課軌跡</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-950">歷史修課與未來規劃</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-500">
-          這裡集中查看已修、未通過與從課程查詢加入的未來規劃；未來規劃只代表草稿或待加簽，不代表已選上。
+          這裡集中查看已修、修課中、未通過與從課程查詢加入的未來規劃；未來規劃只代表草稿或待加簽，不代表已選上。
         </p>
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-5">
           <SummaryBox label="總課程" value={`${totalCourses} 門`} tone="slate" />
           <SummaryBox label="歷史匯入" value={`${historyCount} 門`} tone="blue" />
+          <SummaryBox label="修課中" value={`${inProgressCount} 門`} tone="emerald" />
           <SummaryBox label="未來規劃" value={`${plannedCount} 門`} tone="amber" />
           <SummaryBox label="未通過" value={`${failedCount} 門`} tone={failedCount > 0 ? 'red' : 'emerald'} />
         </div>
@@ -561,6 +568,8 @@ function TimelineCourseCard({
   const isHistory = isHistoryImportedCourse(course);
   const isFailed = isFailedImportedHistoryCourse(course);
   const isRejected = course.virtualSelection?.status === 'rejected';
+  // 校務同步寫入、還沒有成績的課＝正在修；未來規劃是本地加的，帶 virtualSelection
+  const isInProgress = !isHistory && !course.virtualSelection;
   const slots = course.scheduledOffering?.slots || [];
   const teacher = course.scheduledOffering?.teacher || course.details?.professor || '未列教師';
   const location = displayClassroom(course.scheduledOffering?.classroom || course.details?.location);
@@ -568,9 +577,11 @@ function TimelineCourseCard({
     ? 'border-red-200 bg-red-50 hover:bg-red-100'
     : isHistory
       ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
-      : isRejected
-        ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
-        : 'border-blue-200 bg-blue-50 hover:bg-blue-100';
+      : isInProgress
+        ? 'border-sky-200 bg-sky-50 hover:bg-sky-100'
+        : isRejected
+          ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+          : 'border-blue-200 bg-blue-50 hover:bg-blue-100';
 
   return (
     <button
@@ -601,8 +612,10 @@ function TimelineCourseCard({
               </span>
             )}
             {!isHistory && (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${isRejected ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                {isRejected ? '待加簽' : '未來規劃'}
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                isInProgress ? 'bg-sky-100 text-sky-700' : isRejected ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+              }`}>
+                {isInProgress ? '修課中' : isRejected ? '待加簽' : '未來規劃'}
               </span>
             )}
           </div>
