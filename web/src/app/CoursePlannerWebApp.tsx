@@ -11,6 +11,7 @@ import {
   saveGpaApiKey,
   syncOfficialInitialSelection,
 } from '../shared/api';
+import { currentEnrollmentPhase } from '../shared/domain/enrollmentCalendar';
 import { getAccessToken } from '../shared/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useCourseData } from '../shared/hooks/useCourseData';
@@ -188,7 +189,22 @@ export default function CoursePlannerWebApp() {
     resetCourseSearchFilters,
     exportCourseResults,
   } = useCourseSearch();
+  // 預設模式跟著教務處時程表：加退選期進來就該看到選課清單，而不是空的初選面板。
+  // querySemester 初始是寫死的值、要等 /api/courses/semesters 回來才正確，所以用 effect 補；
+  // 使用者手動切過之後就不再覆蓋他的選擇。
   const [planningMode, setPlanningMode] = useState<PlanningMode>('lottery');
+  const planningModeChosenRef = useRef(false);
+  const choosePlanningMode = (mode: PlanningMode) => {
+    planningModeChosenRef.current = true;
+    setPlanningMode(mode);
+  };
+
+  useEffect(() => {
+    if (planningModeChosenRef.current) return;
+    const phase = currentEnrollmentPhase(querySemester);
+    if (phase.kind === 'addDrop') setPlanningMode('addDrop');
+    else if (phase.kind === 'preregistration') setPlanningMode('lottery');
+  }, [querySemester]);
   const [activeRequirement, setActiveRequirement] = useState<PendingRequirement | null>(null);
   const [offeringResults] = useState<CourseSearchResult[]>([]);
   const [offeringStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -266,6 +282,13 @@ export default function CoursePlannerWebApp() {
     name: selectionTargetLabel,
     courses: selectionCourses,
   }), [selectionCourses, selectionTargetLabel]);
+  // 學校那邊實際選上的課：校務同步把選課清單寫進推定學期的 courses
+  const enrolledSemester = inferredSelectionSemesterId
+    ? resolveSemesterById(data.semesters, inferredSelectionSemesterId)
+    : undefined;
+  const enrolledCourses = useMemo(() => (
+    enrolledSemester?.courses.filter((course) => !isHistoryImportedCourse(course)) || []
+  ), [enrolledSemester]);
   const selectionData = useMemo(() => ({
     ...data,
     semesters: [...data.semesters, selectionSemester],
@@ -884,12 +907,14 @@ export default function CoursePlannerWebApp() {
             data={data}
             stats={stats}
             activeSemester={selectionSemester}
+            enrolledCourses={enrolledCourses}
+            querySemester={querySemester}
             planningMode={planningMode}
             plannerMessage={plannerMessage}
             officialSelection={officialSelection}
             officialActionCourseNo={officialActionCourseNo}
             officialOrderStatus={officialOrderStatus}
-            onModeChange={setPlanningMode}
+            onModeChange={choosePlanningMode}
             onJoinOfficialCourse={(courseNo, courseName) => void submitOfficialSelectionCourse('join', courseNo, courseName)}
             onRemoveOfficialCourse={(courseNo, courseName) => void submitOfficialSelectionCourse('remove', courseNo, courseName)}
             onSaveOfficialOrder={(orderedCourseNos) => void saveOfficialSelectionOrder(orderedCourseNos)}

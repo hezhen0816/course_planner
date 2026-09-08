@@ -1,3 +1,4 @@
+import { currentEnrollmentPhase, formatPhaseRange, nextEnrollmentPhase, type EnrollmentPhase } from '../../shared/domain/enrollmentCalendar';
 import { useState, type CSSProperties } from 'react';
 import { ArrowDown, ArrowUp, CheckCircle2, Clock, Loader2, Trash2 } from 'lucide-react';
 import type { AppData, Course, GpaStatus, OfficialSelectionRegisteredCourse, OfficialSelectionRequiredPresetCourse, OfficialSelectionSyncResponse, PendingRequirement, PlannerStats } from '../../shared/types';
@@ -298,6 +299,8 @@ export function PlanningWorkspace({
   data,
   stats,
   activeSemester,
+  enrolledCourses,
+  querySemester,
   planningMode,
   plannerMessage,
   officialSelection,
@@ -312,6 +315,9 @@ export function PlanningWorkspace({
   data: AppData;
   stats: PlannerStats;
   activeSemester?: AppData['semesters'][number];
+  /** 學校那邊實際選上的課（校務同步取自選課清單 ChooseList/D01/D01） */
+  enrolledCourses: Course[];
+  querySemester: string;
   planningMode: PlanningMode;
   plannerMessage: string;
   officialSelection: OfficialSelectionSyncResponse | null;
@@ -332,6 +338,8 @@ export function PlanningWorkspace({
     0,
   );
   const currentPlanningCredits = officialRegisteredCredits + virtualCredits;
+  const enrolledCredits = scheduledCredits(enrolledCourses);
+  const addDropCredits = enrolledCredits + virtualCredits;
   const officialRequiredPresetCourses = officialSelection ? requiredPresetCoursesForDisplay(officialSelection) : [];
   const officialRequiredPresetCount = officialRequiredPresetCourses.length;
   const officialSelectionListCount = officialSelection?.selection_list_rows.length || 0;
@@ -341,6 +349,9 @@ export function PlanningWorkspace({
   const syncedAtLabel = data.schoolSync?.scheduleSyncedAt
     ? `課表 ${new Date(data.schoolSync.scheduleSyncedAt).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}`
     : officialSelection ? formatSyncTime(officialSelection.synced_at) : '尚未同步';
+  const enrollmentPhase: EnrollmentPhase = currentEnrollmentPhase(querySemester);
+  const upcomingPhase = nextEnrollmentPhase(querySemester);
+  const isPreregistrationPhase = enrollmentPhase.kind === 'preregistration';
   const [showWeekend, setShowWeekend] = useState(false);
   const modeOptions: Array<{ value: PlanningMode; label: string }> = [
     { value: 'lottery', label: '初選志願' },
@@ -392,59 +403,113 @@ export function PlanningWorkspace({
         <aside className="border-b border-slate-200 p-4 xl:border-b-0 xl:border-r">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-900">官方狀態與待加簽</h3>
+              <h3 className="text-base font-semibold text-slate-900">
+                {planningMode === 'addDrop' ? '選課清單與待加簽' : '官方狀態與待加簽'}
+              </h3>
               <p className="mt-1 text-xs text-slate-500">{planningModeLabel(planningMode)}模式 · 官方資料優先</p>
             </div>
             <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-              {totalPlanningItems} 項
+              {planningMode === 'addDrop' ? enrolledCourses.length + virtualCourses.length : totalPlanningItems} 項
             </span>
           </div>
 
-          <div className="mt-4 space-y-4">
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-700">
-                  已登記志願
-                </h4>
-                <span className="text-xs text-slate-500">
-                  {officialRegisteredCount} 門
-                </span>
-              </div>
-              {officialSelection ? (
-                <OfficialRegisteredList
-                  data={data}
-                  selection={officialSelection}
-                  actionCourseNo={officialActionCourseNo}
-                  orderStatus={officialOrderStatus}
-                  onRemoveOfficialCourse={onRemoveOfficialCourse}
-                  onSaveOfficialOrder={onSaveOfficialOrder}
-                />
-              ) : (
-                <div className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
-                  先同步官方選課狀態，才能顯示已登記志願。
-                </div>
-              )}
-            </div>
+          {/* 目前階段由教務處時程表推導（shared/domain/enrollmentCalendar），不讓使用者手動宣告 */}
+          <div className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+            enrollmentPhase.kind === 'closed'
+              ? 'border-slate-200 bg-slate-50 text-slate-600'
+              : 'border-blue-200 bg-blue-50 text-blue-800'
+          }`}>
+            {/* 側欄只有 300px：標題與日期分兩行，日期本身不斷行（原本會拆成「9/7 09:00 –」＋「9/21 17:00」） */}
+            {enrollmentPhase.kind === 'closed' ? (
+              <>
+                <div>目前不在選課階段</div>
+                {upcomingPhase && (
+                  <div className="mt-0.5">
+                    下一階段：<span className="font-semibold">{upcomingPhase.label}</span>
+                    <span className="ml-1 whitespace-nowrap">{formatPhaseRange(upcomingPhase)}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div>目前階段：<span className="font-semibold">{enrollmentPhase.label}</span></div>
+                <div className="mt-0.5 whitespace-nowrap">{formatPhaseRange(enrollmentPhase)}</div>
+              </>
+            )}
+          </div>
 
-            <div className="border-t border-slate-100 pt-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-700">待加入清單</h4>
-                <span className="text-xs text-slate-500">
-                  {officialAvailableCount} 門
-                </span>
-              </div>
-              {officialSelection ? (
-                <OfficialAvailableList
-                  selection={officialSelection}
-                  actionCourseNo={officialActionCourseNo}
-                  onJoinOfficialCourse={onJoinOfficialCourse}
-                />
-              ) : (
-                <div className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
-                  先同步官方選課狀態，才能顯示待加入清單。
+          <div className="mt-4 space-y-4">
+            {planningMode === 'addDrop' ? (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-700">目前選課清單</h4>
+                  <span className="text-xs text-slate-500">{enrolledCourses.length} 門・{formatCredits(enrolledCredits)} 學分</span>
                 </div>
-              )}
-            </div>
+                {enrolledCourses.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
+                    先用「資料同步」取得校務系統的選課清單，這裡就會列出已選上的課。
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {enrolledCourses.map((course) => (
+                      <PlanningListCourse key={course.id} course={course} data={data} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {!isPreregistrationPhase && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    目前不是初選階段，官方初選清單本來就會是空的；要看實際選上的課請切到「加退選」。
+                  </div>
+                )}
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-700">
+                      已登記志願
+                    </h4>
+                    <span className="text-xs text-slate-500">
+                      {officialRegisteredCount} 門
+                    </span>
+                  </div>
+                  {officialSelection ? (
+                    <OfficialRegisteredList
+                      data={data}
+                      selection={officialSelection}
+                      actionCourseNo={officialActionCourseNo}
+                      orderStatus={officialOrderStatus}
+                      onRemoveOfficialCourse={onRemoveOfficialCourse}
+                      onSaveOfficialOrder={onSaveOfficialOrder}
+                    />
+                  ) : (
+                    <div className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
+                      先同步官方選課狀態，才能顯示已登記志願。
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-700">待加入清單</h4>
+                    <span className="text-xs text-slate-500">
+                      {officialAvailableCount} 門
+                    </span>
+                  </div>
+                  {officialSelection ? (
+                    <OfficialAvailableList
+                      selection={officialSelection}
+                      actionCourseNo={officialActionCourseNo}
+                      onJoinOfficialCourse={onJoinOfficialCourse}
+                    />
+                  ) : (
+                    <div className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
+                      先同步官方選課狀態，才能顯示待加入清單。
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="border-t border-slate-100 pt-4">
               <div className="mb-2 flex items-center justify-between">
@@ -477,7 +542,9 @@ export function PlanningWorkspace({
               <div>
                 <h3 className="text-base font-semibold text-slate-900">官方功課表</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  已登記 {officialRegisteredCount} 門 · 學校預排 {officialRequiredPresetCount} 門 · 待加簽 {virtualCourses.length} 門
+                  {planningMode === 'addDrop'
+                    ? `已選上 ${enrolledCourses.length} 門 · 待加簽 ${virtualCourses.length} 門`
+                    : `已登記 ${officialRegisteredCount} 門 · 學校預排 ${officialRequiredPresetCount} 門 · 待加簽 ${virtualCourses.length} 門`}
                 </p>
                 {showSelectionListWithoutSchedule ? (
                   <p className="mt-2 text-xs text-amber-600">
@@ -498,6 +565,7 @@ export function PlanningWorkspace({
             officialScheduleRows={officialSelection?.schedule_rows || []}
             officialRegisteredCourses={officialSelection?.registered_courses || []}
             officialRequiredPresetCourses={officialRequiredPresetCourses}
+            enrolledCourses={planningMode === 'addDrop' ? enrolledCourses : []}
             virtualCourses={virtualCourses}
             showWeekend={showWeekend}
             mode={planningMode}
@@ -511,10 +579,21 @@ export function PlanningWorkspace({
           <p className="mt-1 text-xs text-slate-500">依目前選課階段解讀衝堂、互斥與學分限制。</p>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <MetricBox label="已登記志願" value={String(officialRegisteredCount)} tone="emerald" />
-            <MetricBox label="待加入清單" value={String(officialAvailableCount)} tone="blue" />
-            <MetricBox label="目前學分" value={`${formatCredits(currentPlanningCredits)} 學分`} tone="amber" />
-            <MetricBox label="待加簽" value={`${virtualCourses.length} 門`} tone="slate" />
+            {planningMode === 'addDrop' ? (
+              <>
+                <MetricBox label="已選上" value={`${enrolledCourses.length} 門`} tone="emerald" />
+                <MetricBox label="待加入清單" value={String(officialAvailableCount)} tone="blue" />
+                <MetricBox label="目前學分" value={`${formatCredits(addDropCredits)} 學分`} tone="amber" />
+                <MetricBox label="待加簽" value={`${virtualCourses.length} 門`} tone="slate" />
+              </>
+            ) : (
+              <>
+                <MetricBox label="已登記志願" value={String(officialRegisteredCount)} tone="emerald" />
+                <MetricBox label="待加入清單" value={String(officialAvailableCount)} tone="blue" />
+                <MetricBox label="目前學分" value={`${formatCredits(currentPlanningCredits)} 學分`} tone="amber" />
+                <MetricBox label="待加簽" value={`${virtualCourses.length} 門`} tone="slate" />
+              </>
+            )}
           </div>
 
           <div className="mt-4 rounded-lg border border-slate-200 p-3">
@@ -806,6 +885,7 @@ function PlanningScheduleGrid({
   officialScheduleRows,
   officialRegisteredCourses,
   officialRequiredPresetCourses,
+  enrolledCourses,
   virtualCourses,
   showWeekend,
   mode,
@@ -815,6 +895,7 @@ function PlanningScheduleGrid({
   officialScheduleRows: Record<string, string>[];
   officialRegisteredCourses: OfficialSelectionRegisteredCourse[];
   officialRequiredPresetCourses: OfficialSelectionRequiredPresetCourse[];
+  enrolledCourses: Course[];
   virtualCourses: Course[];
   showWeekend: boolean;
   mode: PlanningMode;
@@ -826,6 +907,7 @@ function PlanningScheduleGrid({
       rows={officialScheduleRows}
       officialRegisteredCourses={officialRegisteredCourses}
       officialRequiredPresetCourses={officialRequiredPresetCourses}
+      enrolledCourses={enrolledCourses}
       virtualCourses={virtualCourses}
       showWeekend={showWeekend}
       mode={mode}
@@ -839,6 +921,7 @@ function OfficialScheduleTable({
   rows,
   officialRegisteredCourses,
   officialRequiredPresetCourses,
+  enrolledCourses,
   virtualCourses,
   showWeekend,
   mode,
@@ -848,6 +931,7 @@ function OfficialScheduleTable({
   rows: Record<string, string>[];
   officialRegisteredCourses: OfficialSelectionRegisteredCourse[];
   officialRequiredPresetCourses: OfficialSelectionRequiredPresetCourse[];
+  enrolledCourses: Course[];
   virtualCourses: Course[];
   showWeekend: boolean;
   mode: PlanningMode;
@@ -859,6 +943,8 @@ function OfficialScheduleTable({
   const displayRows = officialRowsForDisplay(rows);
   const events = layoutScheduleEvents([
     ...buildOfficialScheduleEvents(visibleWeekdays, officialRegisteredCourses, officialRequiredPresetCourses, data),
+    // 已選上的課用 official 樣式畫：本地刪除不會真的退選，所以不給刪除鈕
+    ...buildVirtualScheduleEvents(enrolledCourses, visibleWeekdays, data, 'official'),
     ...buildVirtualScheduleEvents(virtualCourses, visibleWeekdays, data),
   ]);
   const gridTemplateColumns = `72px repeat(${visibleWeekdays.length}, minmax(132px, 1fr))`;
@@ -1161,6 +1247,7 @@ function buildVirtualScheduleEvents(
   courses: Course[],
   weekdays: typeof OFFICIAL_WEEKDAYS,
   data: AppData,
+  kind: 'virtual' | 'official' = 'virtual',
 ): RawScheduleEvent[] {
   const events: RawScheduleEvent[] = [];
   courses.forEach((course) => {
@@ -1189,11 +1276,11 @@ function buildVirtualScheduleEvents(
           course.scheduledOffering?.courseNo || '',
           course.scheduledOffering?.requireOption,
           data,
-          'virtual',
+          kind === 'virtual' ? 'virtual' : 'other',
         );
         events.push({
-          id: `virtual-${course.id}-${weekday.label}-${periodIndex}`,
-          kind: 'virtual',
+          id: `${kind}-${course.id}-${weekday.label}-${periodIndex}`,
+          kind,
           weekdayLabel: weekday.label,
           startIndex: periodIndex,
           span,
@@ -1336,7 +1423,8 @@ function PlanningListCourse({
 }: {
   course: Course;
   data: AppData;
-  onDelete: () => void;
+  /** 省略即為唯讀（例如學校那邊已選上的課，本地刪除不會真的退選） */
+  onDelete?: () => void;
 }) {
   const slots = course.scheduledOffering?.slots || [];
   const classification = classifyCourseByCode(
@@ -1372,14 +1460,16 @@ function PlanningListCourse({
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
-          title="移除待加簽課程"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+            title="移除待加簽課程"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
