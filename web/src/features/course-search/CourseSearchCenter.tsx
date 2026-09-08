@@ -352,7 +352,7 @@ export function CourseSearchCenter({
               <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
                 <th className="border-b border-slate-200 px-3 py-3">課碼</th>
                 <th className="border-b border-slate-200 px-3 py-3">開課系所</th>
-                <th className="border-b border-slate-200 px-3 py-3">課名</th>
+                <th className="min-w-[200px] border-b border-slate-200 px-3 py-3">課名</th>
                 <th className="border-b border-slate-200 px-3 py-3">教師</th>
                 <th className="border-b border-slate-200 px-3 py-3">學分</th>
                 <th className="border-b border-slate-200 px-3 py-3">GPA</th>
@@ -360,7 +360,7 @@ export function CourseSearchCenter({
                 <th className="border-b border-slate-200 px-3 py-3">教室</th>
                 <th className="border-b border-slate-200 px-3 py-3">名額</th>
                 <th className="border-b border-slate-200 px-3 py-3">備註</th>
-                <th className="border-b border-slate-200 px-3 py-3 text-right">操作</th>
+                <th className="w-px whitespace-nowrap border-b border-slate-200 px-3 py-3 text-right">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -613,7 +613,7 @@ function CourseResultRow({
           <span className="text-xs text-slate-400">未列</span>
         )}
       </td>
-      <td className="border-b border-slate-100 px-3 py-3">
+      <td className="min-w-[200px] border-b border-slate-100 px-3 py-3">
         <div className="font-semibold text-slate-900">{offering.course_name}</div>
           <div className="mt-1 flex flex-wrap gap-1">
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">{requirementLabel(offering.require_option)}</span>
@@ -640,14 +640,48 @@ function CourseResultRow({
       <td className="min-w-[240px] max-w-xl whitespace-normal break-words border-b border-slate-100 px-3 py-3 text-xs leading-relaxed text-slate-600">
         {offering.contents || (conflicts.length > 0 ? `與 ${conflicts.map((course) => course.name).join('、')} 衝堂` : '無備註')}
       </td>
-      <td className="border-b border-slate-100 px-3 py-3">
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex max-w-[260px] flex-wrap justify-end gap-2">
+      <td className="w-px whitespace-nowrap border-b border-slate-100 px-3 py-3 align-top">
+        {/* 四個控制項原本各佔一列，把列高撐到三倍；改成一列小按鈕，
+            認列下拉只在真的有雙主修／輔系規則時才出現（沒有時它只有「不指定認列」一個選項）。 */}
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => onAddPlannedCourse(selectedRequirementId || undefined)}
+              disabled={!offering.course_no}
+              title={alreadyVirtual ? '更新未來規劃' : '加入未來規劃'}
+              className="inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            >
+              <Plus className="h-3 w-3" />
+              {alreadyVirtual ? '更新' : '規劃'}
+            </button>
+            <button
+              type="button"
+              onClick={onAddSelectionCourse}
+              disabled={!offering.course_no || isOfficialActionLoading}
+              title={alreadyVirtual ? '重新送出到官方選課清單' : '加入官方選課清單'}
+              className="inline-flex items-center gap-1 rounded-md border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            >
+              {isOfficialActionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ListChecks className="h-3 w-3" />}
+              {isOfficialActionLoading ? '處理中' : alreadyVirtual ? '重送' : '選課'}
+            </button>
+            <button
+              type="button"
+              onClick={onAddMonitorCourse}
+              disabled={!offering.course_no || isMonitorActionLoading}
+              title="加入選課監控：名額出現時通知，也可開啟自動加選"
+              className="inline-flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            >
+              {isMonitorActionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radar className="h-3 w-3" />}
+              {isMonitorActionLoading ? '處理中' : '監聽'}
+            </button>
+          </div>
+          {recognitionRequirements.length > 0 && (
             <select
               value={selectedRequirementId}
               onChange={(event) => setSelectedRequirementId(event.target.value)}
-              className="min-h-8 max-w-[160px] rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-              title="指定認列規則"
+              className="max-w-[180px] rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700"
+              title="「規劃」要認列到哪一條雙主修／輔系規則"
             >
               <option value="">不指定認列</option>
               {recognitionRequirements.map((requirement) => (
@@ -656,33 +690,7 @@ function CourseResultRow({
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={() => onAddPlannedCourse(selectedRequirementId || undefined)}
-              disabled={!offering.course_no}
-              className="inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-            >
-              {alreadyVirtual ? '更新規劃' : '加入未來規劃'}
-            </button>
-          </div>
-          <button
-            onClick={onAddSelectionCourse}
-            disabled={!offering.course_no || isOfficialActionLoading}
-            className="inline-flex items-center gap-1 rounded-md border border-blue-300 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-          >
-            {isOfficialActionLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-            {isOfficialActionLoading ? '處理中' : alreadyVirtual ? '重新送出' : '加入選課清單'}
-          </button>
-          <button
-            type="button"
-            onClick={onAddMonitorCourse}
-            disabled={!offering.course_no || isMonitorActionLoading}
-            title="加入選課監控：名額出現時通知，也可開啟自動加選"
-            className="inline-flex items-center gap-1 rounded-md border border-amber-300 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-          >
-            {isMonitorActionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radar className="h-3 w-3" />}
-            {isMonitorActionLoading ? '處理中' : '加入監聽'}
-          </button>
+          )}
         </div>
       </td>
     </tr>

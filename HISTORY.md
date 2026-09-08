@@ -20,6 +20,10 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-08 課程查詢列高從 156px 降到 81px
+
+操作欄四個控制項改成一列三顆小按鈕（規劃／選課／監聽，完整說明放 title），認列下拉只在真的有雙主修／輔系規則時才出現（沒有時它只有「不指定認列」一個選項）。量測後發現列高的主因其實不只是按鈕：課名欄被壓到 48px 寬，字與標籤垂直堆成 119px；補上 `min-w-[200px]`、操作欄改 `w-px whitespace-nowrap` 後，六列都是 81px（原 156px），無水平溢出。
+
 ## 2026-09-08 刪除三個 codex 殘留分支
 
 都停在 6 月，且沒有 main 缺少的東西：`web-planner-redesign` 領先 0 個 commit（內容全在 main）；`web-ux-audit-low-risk`（19）與 `project-refactor`（99）的內容在 2026-09-07 已挑完，剩下的是刻意不要的後端目錄重整與 typed planner。刪除本機與 origin 的分支，並移除殘留的空目錄 `tests/backend/typed_planner`。分支尖端 SHA 記錄於此以備救回（GitHub 端 90 天內也可用 reflog／API 復原）：
