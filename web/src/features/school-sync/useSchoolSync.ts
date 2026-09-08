@@ -202,7 +202,7 @@ export function useSchoolSync({
       if (includeSchedule) {
         setSchoolSyncMessage('正在同步最新選課清單...');
         schedulePayload = await syncSchoolSchedule(username, password, token || undefined);
-        courses = coursesFromScheduleSync(schedulePayload);
+        courses = coursesFromScheduleSync(schedulePayload, querySemester);
         // 選課清單沒有 Dimension，用課碼回查課程查詢系統補上通識向度
         const dimensions = await lookupGenEdDimensions(courses, querySemester);
         if (dimensions.size > 0) {

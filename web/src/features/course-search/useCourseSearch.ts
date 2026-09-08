@@ -1,3 +1,4 @@
+import { guessCurrentSemester } from '../../shared/domain/planner';
 import { getAccessToken } from '../../shared/supabase';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCourseSemesters, searchCourses } from '../../shared/api';
@@ -37,7 +38,8 @@ function splitCourseNameQueries(query: string): string[] {
 }
 
 export function useCourseSearch() {
-  const [querySemester, setQuerySemester] = useState('1142');
+  // 由日期推算，等 /api/courses/semesters 回來再校正；寫死會過期
+  const [querySemester, setQuerySemester] = useState(guessCurrentSemester);
   const [courseSemesters, setCourseSemesters] = useState<CourseSemesterInfo[]>([]);
   const [manualQuery, setManualQuery] = useState('');
   const [manualMode, setManualMode] = useState<SearchMode>('name');

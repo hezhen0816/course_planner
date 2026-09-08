@@ -1,5 +1,6 @@
 import ClampedNumberInput from './ClampedNumberInput';
 import { formatDateTime } from './format';
+import { guessCurrentSemester } from '../../shared/domain/planner';
 import React, { useState, useEffect } from 'react';
 import {
   Search,
@@ -193,12 +194,16 @@ const CourseSettingsModal: React.FC<CourseSettingsModalProps> = ({ course, semes
 const NTUST_API = 'https://querycourse.ntust.edu.tw/QueryCourse/api/courses';
 const NTUST_SEMESTERS_API = 'https://querycourse.ntust.edu.tw/QueryCourse/api/semestersinfo';
 const isValidSemester = (semester: string) => /^[0-9]{4}$/.test(semester);
-const FALLBACK_SEMESTER_OPTIONS: SemesterOption[] = [
-  { semester: '1151', english_label: '2026 Fall', current: true },
-  { semester: '1142', english_label: '2026 Spring', current: false },
-  { semester: '1141', english_label: '2025 Fall', current: false },
-  { semester: '1132', english_label: '2025 Spring', current: false },
-];
+// 只在學校 API 打不通時使用；current 由日期推算，不寫死某一年
+const FALLBACK_SEMESTER_OPTIONS: SemesterOption[] = (() => {
+  const guessed = guessCurrentSemester();
+  return [
+    { semester: guessed, english_label: '', current: true },
+    { semester: '1151', english_label: '2026 Fall', current: false },
+    { semester: '1142', english_label: '2026 Spring', current: false },
+    { semester: '1141', english_label: '2025 Fall', current: false },
+  ].filter((option, index, list) => list.findIndex((item) => item.semester === option.semester) === index);
+})();
 
 const fetchSemesterOptions = async (): Promise<SemesterOption[]> => {
   try {

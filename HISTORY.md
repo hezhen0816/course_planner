@@ -20,6 +20,11 @@
 
 13 門監控課程變成 expired 10／monitoring 2／enrolled 1，worker log 逐門列出「早於當前學期 1151，停止監控」且無錯誤。名額修正在真實資料上可見：`BA4409701 證券管理` 原本顯示 `49/9999`（Restrict1=9999 被當成無上限），現在是 `49/49`。已過期課程的 `current_enrolled` 一併清空（停止輪詢後不會再更新，留著會被當成現況）：既有 10 門用 service key 清為 null，worker 標記過期時也同步清除；監控頁人數欄補上 `—` 的預設值。
 
+## 2026-09-09 新版本提示；寫死的學期改為由日期推算
+
+部署後使用者的分頁仍跑舊 bundle，同一天踩兩次「明明部署了卻沒生效」（通識分類、修課中顯示）。新增 `UpdateNotice`：每 5 分鐘與分頁重新可見時抓一次 `index.html`（`cache: 'no-store'`），比對其中的 `/assets/*.js` 與目前載入的是否相同，不同就顯示可點的重新整理橫幅；抓不到就不提示，避免離線誤報。
+寫死學期：`useCourseSearch` 初值是 `'1142'`（已過期），正是選課工作台模式沒自動切到加退選的原因；`coursesFromScheduleSync` 也把 `scheduledOffering.semester` 寫死 `'1151'`。改為 `guessCurrentSemester()` 由日期推算（8–1 月為上學期，規則與 `backend/monitor/semester.py` 一致），API 回來後再校正；同步時把 `querySemester` 傳進去。監控頁的離線 fallback 也改由推算決定 `current`。邊界驗算：1/15→1141、2/1→1142、7/31→1142、8/1→1151、2027/3/1→1152。
+
 ## 2026-09-09 修課軌跡補上「修課中」：正在修的課原本被過濾掉
 
 `CourseTimelinePage` 的 `timelineSemesters` 是 `semester.courses.filter(isHistoryImportedCourse)`，只留有成績的歷史匯入課，於是校務同步寫入、還沒有成績的 12 門在修課程整批看不到——大二上因此只顯示 2 門待加簽。統計面板其實一直有算它們（`usePlannerStats` 走的是全部 `semester.courses`），所以是純顯示缺口。改為全部顯示，並以 `!isHistoryImportedCourse && !virtualSelection` 判定「修課中」（天藍色標籤），與歷史修課（綠）、待加簽／未來規劃（琥珀／藍）區分；摘要列多一格「修課中 N 門」。

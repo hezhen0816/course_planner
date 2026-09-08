@@ -269,6 +269,19 @@ export function courseFromOffering(
  * 且沒有任何第三碼為 G 的課沒有向度，所以這個規則精確。
  * 之前只認 `GE` 開頭，導致 TCG 的通識課因為 required_type 是「必修」被歸成本系必修。
  */
+/**
+ * 由日期推算學年期（民國學年 + 學期）。8 月–1 月算上學期、2 月–7 月算下學期，
+ * 與 backend/monitor/semester.py 的 `_guess_semester_from_date` 同一套規則。
+ * 只當作 `/api/courses/semesters` 回來前的初值，避免寫死的學期隨時間過期
+ * （寫死 '1142' 曾導致選課工作台的階段判斷用到錯的學期）。
+ */
+export function guessCurrentSemester(now: Date = new Date()): string {
+  const month = now.getMonth() + 1;
+  const rocYear = month >= 8 ? now.getFullYear() - 1911 : now.getFullYear() - 1912;
+  const term = month >= 8 || month <= 1 ? 1 : 2;
+  return `${rocYear}${term}`;
+}
+
 export function isGenEdCourseCode(courseCode: string): boolean {
   const code = courseCode.trim().toUpperCase();
   if (code.length < 3) return false;
@@ -347,7 +360,8 @@ export function uniqueTextValues(values: Array<string | null | undefined>): stri
   return normalized;
 }
 
-export function coursesFromScheduleSync(payload: ScheduleSyncResponse): Course[] {
+export function coursesFromScheduleSync(payload: ScheduleSyncResponse, semester?: string): Course[] {
+  const offeringSemester = (semester || '').trim() || guessCurrentSemester();
   return payload.courses.map((course) => {
     const matchingSlots = payload.slots.filter((slot) => slot.course_name === course.course_name);
     const slots = uniqueTextValues(matchingSlots.map(slotCodeFromSyncedSlot));
@@ -355,7 +369,7 @@ export function coursesFromScheduleSync(payload: ScheduleSyncResponse): Course[]
     const classroomText = classrooms.join(', ');
     const credits = typeof course.credits === 'number' ? course.credits : Number(course.credits) || 0;
     const scheduledOffering: ScheduledOffering = {
-      semester: '1151',
+      semester: offeringSemester,
       courseNo: course.course_code,
       courseName: course.course_name,
       teacher: course.professor,
