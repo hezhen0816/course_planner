@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
+import threading
+import time
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
@@ -115,9 +118,70 @@ def _service_role_headers(*, json_body: bool = False) -> dict[str, str]:
     return headers
 
 
+# 已驗證 token 的短期快取：每個請求都同步打 /auth/v1/user 既慢又吃 egress，
+# Supabase 抖動時整個後端跟著失效。只快取成功結果，且不超過 JWT 本身的 exp。
+USER_ID_CACHE_TTL_SECONDS = 60
+_USER_ID_CACHE_MAX = 2000
+_user_id_cache: dict[str, tuple[str, float]] = {}
+_user_id_cache_lock = threading.Lock()
+
+
+def clear_user_id_cache() -> None:
+    with _user_id_cache_lock:
+        _user_id_cache.clear()
+
+
+def _jwt_exp(access_token: str) -> float | None:
+    """Best-effort read of the JWT ``exp`` claim (no signature check; Supabase verifies)."""
+    try:
+        payload_b64 = access_token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        exp = payload.get("exp")
+        return float(exp) if isinstance(exp, (int, float)) else None
+    except Exception:
+        return None
+
+
+def _cache_key(access_token: str) -> str:
+    return hashlib.sha256(access_token.encode("utf-8")).hexdigest()
+
+
+def _cached_user_id(access_token: str) -> str | None:
+    key = _cache_key(access_token)
+    now = time.time()
+    with _user_id_cache_lock:
+        entry = _user_id_cache.get(key)
+        if entry and entry[1] > now:
+            return entry[0]
+        if entry:
+            _user_id_cache.pop(key, None)
+    return None
+
+
+def _store_user_id(access_token: str, user_id: str) -> None:
+    now = time.time()
+    expires = now + USER_ID_CACHE_TTL_SECONDS
+    exp = _jwt_exp(access_token)
+    if exp is not None:
+        expires = min(expires, exp)
+    if expires <= now:
+        return
+    with _user_id_cache_lock:
+        if len(_user_id_cache) >= _USER_ID_CACHE_MAX:
+            for k in [k for k, (_, e) in _user_id_cache.items() if e <= now]:
+                _user_id_cache.pop(k, None)
+            if len(_user_id_cache) >= _USER_ID_CACHE_MAX:
+                _user_id_cache.clear()
+        _user_id_cache[_cache_key(access_token)] = (user_id, expires)
+
+
 def resolve_user_id(access_token: str) -> str:
     if not SUPABASE_URL:
         raise CredentialStoreError("後端尚未設定 Supabase URL，無法驗證登入狀態。")
+    cached = _cached_user_id(access_token)
+    if cached:
+        return cached
     api_key = SUPABASE_ANON_KEY
     if _is_placeholder(api_key):
         _require_service_supabase_config()
@@ -140,6 +204,7 @@ def resolve_user_id(access_token: str) -> str:
     user_id = str(payload.get("id") or "")
     if not user_id:
         raise CredentialStoreError("無法驗證目前登入使用者。")
+    _store_user_id(access_token, user_id)
     return user_id
 
 

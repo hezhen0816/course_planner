@@ -16,6 +16,10 @@
 
 ---
 
+## 2026-09-08 token 驗證加 60 秒快取；worker 缺 service role key 改為直接失敗
+
+`resolve_user_id` 以 token 的 SHA-256 為鍵快取成功結果 60 秒，且不超過 JWT `exp`；失敗不快取，上限 2000 筆。撤銷的 token 最多多活 60 秒，可接受（Supabase 本身 access token 也是一小時）。worker 啟動改讀 `backend/config.py` 的 `SUPABASE_URL`／`SUPABASE_SERVICE_ROLE_KEY`，缺服務金鑰直接退出：以前退回 anon key 會讓 `app_private` 讀取與 session 寫入靜默失敗。
+
 ## 2026-09-08 10:12 部署登入流程合一等六個 commit
 
 migration `20260908170000` 已套用；Vercel、Windows 後端與 worker 都在 `93c0f49`。worker 重啟後三個帳號的預先登入：B11430207 成功、B11410144 成功（此帳號在舊流程下整天回 500）、B11430227 仍回 SSO 500。

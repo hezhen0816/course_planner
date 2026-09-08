@@ -890,19 +890,19 @@ class SupabaseMonitor(CourseMonitor):
             self._stop_user_worker(uid)
 
 if __name__ == "__main__":
-    # Get Supabase credentials from env
-    SUPABASE_URL = os.getenv("VITE_SUPABASE_URL") or os.getenv("SUPABASE_URL")
-    # Prefer Service Role Key for backend worker to bypass RLS
-    SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
-    
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        logger.error("缺少 Supabase 憑證，請在 .env 中設定 VITE_SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY")
+    # Supabase 設定以 backend/config.py 為單一來源（worker 已在 import 前 load_dotenv）。
+    # 缺 service role key 直接失敗：退回 anon key 會讓 app_private 讀取與 session 寫入靜默失敗。
+    from ..config import SUPABASE_URL as CFG_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY as CFG_SERVICE_KEY
+    from ..credentials import _is_placeholder
+
+    SUPABASE_URL = CFG_SUPABASE_URL or (os.getenv("VITE_SUPABASE_URL") or "").rstrip("/")
+    if not SUPABASE_URL:
+        logger.error("缺少 SUPABASE_URL（或 VITE_SUPABASE_URL），請在 .env 設定")
+        sys.exit(1)
+    if _is_placeholder(CFG_SERVICE_KEY):
+        logger.error("缺少 SUPABASE_SERVICE_ROLE_KEY：worker 需要服務金鑰才能讀 app_private 與寫入 session，不再退回匿名金鑰")
         sys.exit(1)
 
-    if os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
-        logger.info("使用服務金鑰（管理員權限）")
-    else:
-        logger.warning("使用匿名金鑰，部分操作可能受 RLS 限制")
-
-    monitor = SupabaseMonitor(SUPABASE_URL, SUPABASE_KEY)
+    logger.info("使用服務金鑰（管理員權限）")
+    monitor = SupabaseMonitor(SUPABASE_URL, CFG_SERVICE_KEY)
     monitor.run_loop()

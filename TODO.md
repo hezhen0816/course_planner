@@ -26,7 +26,6 @@
 
 - [ ] 課程查詢表格列高：右側「操作」欄疊三個控制項（認列下拉、加入未來規劃、加入選課清單），可改成一列或收合。
 - [ ] Web 寫死的學期（`useCourseSearch.ts` 的 `1142`、`planner.ts` 的 `1151`）改由 `/api/courses/semesters` 提供；等下學期開學時驗證。
-- [ ] 後端每個已驗證請求都同步呼叫 Supabase `/auth/v1/user` 驗 token，沒有快取；Supabase 暫停時後端全部失效。
 - [ ] `codex/project-refactor` 分支尚未移植的部分：選課工作台卡片微調（20 個 commit，多數已 revert）、typed planner 資料庫與後端目錄重整。除非需要，不合併。
 - [ ] 名額判定用 `ChooseStudent` 對 `Restrict1`；學校頁面 `50(45/5)` 的 5 是額外名額，若學校以總數計算會誤判有位，需確認。
 - [ ] iOS 新增監聽狀態頁（讀 `monitored_courses` 與 `system_logs`），可延後。
@@ -35,7 +34,6 @@
 
 - [ ] 課程查詢 client：`backend/monitor/api_client.py` 與 `backend/tr_rooms.py` 各打一次 `querycourse` API；保留 `tr_rooms`（有 Origin/Referer 標頭、快取）當傳輸層，`api_client` 只留延遲與失敗旗標。
 - [ ] 學期偵測三份（`monitor/semester.py`、`tr_rooms.fetch_current_query_semester`、`api/courses.py`）：保留 `monitor/semester.py` 的驗證與候選回退，讓另外兩處呼叫它。
-- [ ] Supabase 連線與環境變數名稱：worker 用 SDK 讀 `VITE_SUPABASE_URL`，Compass 用手刻 PostgREST 讀 `SUPABASE_URL`；統一到 `backend/config.py`，且 worker 缺 service role key 時應直接失敗而不是退回 anon key。
 - [ ] `NTUST_VERIFY_SSL` 與代理：旗標在 `config.py` 與 `monitor/api_client.py`、`monitor/enrollment.py` 各解析一次，`urllib3.disable_warnings` 呼叫兩次，代理設定在 `api_client` 與 `enrollment` 重複；做一個 `build_session(verify_ssl, proxies)`。
 - [ ] 日誌：`monitor/utils.setup_logging` 是唯一的集中設定，Compass 其他模組各自 `getLogger`；抽成 `backend/logging_setup.py`。
 - [ ] 時區：`monitor/monitor.py` 內嵌 `ZoneInfo('Asia/Taipei')`，改用 `backend/time_utils.now`。
