@@ -1,3 +1,4 @@
+import ClampedNumberInput from './ClampedNumberInput';
 import React, { useState, useEffect } from 'react';
 import { KeyRound, Activity, Bell, Save, Loader2, Mail, Clock } from 'lucide-react';
 import { supabase } from './supabaseClient';
@@ -211,15 +212,12 @@ const MonitorSettingsView: React.FC = () => {
                 className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
               <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min="500"
-                  step="500"
+                <ClampedNumberInput
+                  min={500}
+                  max={60000}
+                  step={500}
                   value={settings.check_interval}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value);
-                    if (!isNaN(v) && v >= 500) setSettings({ ...settings, check_interval: v });
-                  }}
+                  onCommit={(v) => setSettings({ ...settings, check_interval: v })}
                   className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-sm text-center focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
                 />
                 <span className="text-slate-400 text-xs whitespace-nowrap">ms</span>
@@ -299,15 +297,11 @@ const MonitorSettingsView: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">隨機間隔範圍 (秒)</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
+                  <ClampedNumberInput
+                    min={0}
+                    max={60}
                     value={settings.random_interval}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value);
-                      if (!isNaN(v) && v >= 0) setSettings({ ...settings, random_interval: v });
-                    }}
+                    onCommit={(v) => setSettings({ ...settings, random_interval: v })}
                     className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-slate-800 text-center"
                   />
                   <span className="text-slate-400 text-sm whitespace-nowrap">秒</span>
@@ -410,15 +404,11 @@ const MonitorSettingsView: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">SMTP 埠號</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="65535"
+                    <ClampedNumberInput
+                      min={1}
+                      max={65535}
                       value={settings.smtp_port}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value);
-                        if (!isNaN(v) && v >= 1) setSettings({ ...settings, smtp_port: v });
-                      }}
+                      onCommit={(v) => setSettings({ ...settings, smtp_port: v })}
                       className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-800"
                     />
                   </div>

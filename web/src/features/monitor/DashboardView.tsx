@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { HEARTBEAT_INTERVAL_MS, HEARTBEAT_TIMEOUT_MS } from './workerStatus';
+import { formatDateTime } from './format';
 
 interface Log {
   id: number;
@@ -153,7 +154,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
             // 10 秒輪詢可能已先把同一筆放進來，避免重複（也避免 React key 重複）
             setLogs(prev => prev.some(l => l.id === newLog.id) ? prev : [...prev, {
               id: newLog.id,
-              time: logTime.toLocaleTimeString(),
+              time: formatDateTime(logTime),
               type: newLog.type,
               message: newLog.message
             }].slice(-MAX_LOG_ROWS));
@@ -342,7 +343,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
         : null;
       setLogs(ordered.map(log => ({
         id: log.id,
-        time: new Date(log.created_at).toLocaleTimeString(),
+        time: formatDateTime(log.created_at),
         type: log.type,
         message: log.message
       })));
@@ -384,7 +385,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
         .filter(log => !seen.has(log.id))
         .map(log => ({
           id: log.id,
-          time: new Date(log.created_at).toLocaleTimeString(),
+          time: formatDateTime(log.created_at),
           type: log.type,
           message: log.message
         }));
@@ -679,7 +680,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, workerOnline 
                         <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">{course.course_code}</span>
                       </div>
                       <div className="flex items-center mt-2 text-xs text-slate-400">
-                        <Clock size={12} className="mr-1" /> 最後檢查: {course.last_check_time ? new Date(course.last_check_time).toLocaleTimeString() : '尚未檢查'}
+                        <Clock size={12} className="mr-1" /> 最後檢查: {course.last_check_time ? formatDateTime(course.last_check_time) : '尚未檢查'}
                       </div>
                     </div>
                   </div>

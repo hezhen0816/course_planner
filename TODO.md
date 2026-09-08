@@ -31,7 +31,6 @@
 - [ ] 後端每個已驗證請求都同步呼叫 Supabase `/auth/v1/user` 驗 token，沒有快取；Supabase 暫停時後端全部失效。
 - [ ] `codex/project-refactor` 分支尚未移植的部分：選課工作台卡片微調（20 個 commit，多數已 revert）、typed planner 資料庫與後端目錄重整。除非需要，不合併。
 - [ ] 名額判定用 `ChooseStudent` 對 `Restrict1`；學校頁面 `50(45/5)` 的 5 是額外名額，若學校以總數計算會誤判有位，需確認。
-- [ ] 監控頁小問題：數字輸入框無法清空重打（`min` 在 onChange 就擋）、日誌與最後檢查時間不顯示日期。
 - [ ] iOS 新增監聽狀態頁（讀 `monitored_courses` 與 `system_logs`），可延後。
 
 ## P2 重構／共用（2026-09-08 子代理審查 backend/monitor 與 backend 重複處，按價值排序）
